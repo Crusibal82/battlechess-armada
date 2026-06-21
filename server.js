@@ -1,0 +1,418 @@
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const PORT = Number(process.env.PORT || 8080);
+const HOST = process.env.HOST || "0.0.0.0";
+const ROOT = __dirname;
+const DATA_DIR = process.env.BATTLECHESS_DATA_DIR || path.join(ROOT, "data");
+const MAX_LOBBIES = 25;
+const COLORS = ["blue", "red"];
+const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+const MAX_CHAT_MESSAGES = 80;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = 8;
+const loginAttempts = new Map();
+
+const lobbies = Array.from({ length: MAX_LOBBIES }, (_, index) => ({
+  id: String(index + 1).padStart(2, "0"),
+  name: `Lobby ${index + 1}`,
+  players: { blue: null, red: null },
+  gameState: null,
+  gameVersion: 0,
+  gameUpdatedBy: null,
+  chat: [],
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+}));
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const authSessions = new Map();
+
+const mimeTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+};
+
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...securityHeaders(),
+  });
+  res.end(body);
+}
+
+function securityHeaders() {
+  return {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+  };
+}
+
+function clientIp(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+}
+
+function loginAttemptKey(req, username) {
+  return `${clientIp(req)}:${String(username || "").toLowerCase()}`;
+}
+
+function isLoginLimited(req, username) {
+  const key = loginAttemptKey(req, username);
+  const now = Date.now();
+  const record = loginAttempts.get(key);
+  if (!record || now > record.resetAt) return false;
+  return record.count >= MAX_LOGIN_ATTEMPTS;
+}
+
+function recordLoginFailure(req, username) {
+  const key = loginAttemptKey(req, username);
+  const now = Date.now();
+  const record = loginAttempts.get(key);
+  if (!record || now > record.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+    return;
+  }
+  record.count += 1;
+}
+
+function clearLoginFailures(req, username) {
+  loginAttempts.delete(loginAttemptKey(req, username));
+}
+
+function publicUser(user) {
+  return { id: user.id, username: user.username };
+}
+
+function authFromRequest(req) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const session = authSessions.get(token);
+  if (!session) return null;
+  session.lastSeenAt = Date.now();
+  const user = { id: session.userId, username: session.username };
+  return { token, session, user };
+}
+
+function requireAuth(req, res) {
+  const auth = authFromRequest(req);
+  if (!auth) {
+    sendJson(res, 401, { error: "Login required." });
+    return null;
+  }
+  return auth;
+}
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 1_000_000) req.destroy();
+    });
+    req.on("end", () => {
+      if (!body) return resolve({});
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+function publicLobby(lobby) {
+  return {
+    id: lobby.id,
+    name: lobby.name,
+    players: {
+      blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
+      red: lobby.players.red ? { name: lobby.players.red.name } : null,
+    },
+    openSeats: COLORS.filter((color) => !lobby.players[color]),
+    updatedAt: lobby.updatedAt,
+  };
+}
+
+function findLobby(id) {
+  return lobbies.find((lobby) => lobby.id === id);
+}
+
+function removePlayerFromLobby(token, requestedLobbyId = null) {
+  const session = authSessions.get(token);
+  const lobbyIds = requestedLobbyId ? [requestedLobbyId] : [session?.lobbyId, ...lobbies.map((lobby) => lobby.id)];
+  for (const lobbyId of lobbyIds.filter(Boolean)) {
+    const lobby = findLobby(lobbyId);
+    if (!lobby) continue;
+    for (const color of COLORS) {
+      if (lobby.players[color]?.token === token) {
+        lobby.players[color] = null;
+      }
+    }
+    lobby.updatedAt = Date.now();
+    resetLobbyGameIfEmpty(lobby);
+  }
+  if (session) {
+    delete session.lobbyId;
+    delete session.color;
+  }
+}
+
+function resetLobbyGameIfEmpty(lobby) {
+  if (lobby.players.blue || lobby.players.red) return;
+  lobby.gameState = null;
+  lobby.gameVersion = 0;
+  lobby.gameUpdatedBy = null;
+  lobby.chat = [];
+}
+
+function cleanupStaleSessions() {
+  const now = Date.now();
+  for (const [token, session] of authSessions.entries()) {
+    if (now - (session.lastSeenAt || session.createdAt || 0) > SESSION_TIMEOUT_MS) {
+      removePlayerFromLobby(token);
+      authSessions.delete(token);
+    }
+  }
+
+  for (const lobby of lobbies) {
+    for (const color of COLORS) {
+      const player = lobby.players[color];
+      if (player && !authSessions.has(player.token)) {
+        lobby.players[color] = null;
+        lobby.updatedAt = now;
+      }
+    }
+    resetLobbyGameIfEmpty(lobby);
+  }
+}
+
+async function handleApi(req, res, url) {
+  cleanupStaleSessions();
+  if (req.method === "POST" && url.pathname === "/api/auth/register") {
+    return sendJson(res, 410, { error: "Account creation is no longer required. Enter a username to join." });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+    const username = String(payload.username || "").trim();
+    if (isLoginLimited(req, username)) return sendJson(res, 429, { error: "Too many login attempts. Try again later." });
+    if (!/^[A-Za-z0-9_-]{3,32}$/.test(username)) {
+      recordLoginFailure(req, username);
+      return sendJson(res, 400, { error: "Username must be 3-32 letters, numbers, underscores, or hyphens." });
+    }
+    clearLoginFailures(req, username);
+    const user = { id: crypto.randomBytes(12).toString("hex"), username };
+    const token = crypto.randomBytes(24).toString("hex");
+    authSessions.set(token, { userId: user.id, username: user.username, createdAt: Date.now(), lastSeenAt: Date.now() });
+    return sendJson(res, 200, { token, user: publicUser(user) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    const auth = authFromRequest(req);
+    if (auth) {
+      removePlayerFromLobby(auth.token);
+      authSessions.delete(auth.token);
+    }
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/auth/me") {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    return sendJson(res, 200, { user: publicUser(auth.user), session: auth.session });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/lobbies") {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    return sendJson(res, 200, { lobbies: lobbies.map(publicLobby) });
+  }
+
+  const joinMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/join$/);
+  if (req.method === "POST" && joinMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(joinMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+
+    const color = String(payload.color || "").toLowerCase();
+    if (!COLORS.includes(color)) return sendJson(res, 400, { error: "Color must be blue or red." });
+    if (lobby.players[color]) return sendJson(res, 409, { error: `${color} is already seated.` });
+    if (auth.session.lobbyId) return sendJson(res, 409, { error: "Leave your current lobby before joining another." });
+
+    const player = { name: auth.user.username, userId: auth.user.id, color, token: auth.token, joinedAt: Date.now() };
+    lobby.players[color] = player;
+    lobby.updatedAt = Date.now();
+    auth.session.lobbyId = lobby.id;
+    auth.session.color = color;
+
+    return sendJson(res, 200, { token: auth.token, lobby: publicLobby(lobby), color, name: auth.user.username });
+  }
+
+  const leaveMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/leave$/);
+  if (req.method === "POST" && leaveMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    removePlayerFromLobby(auth.token, leaveMatch[1]);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  const stateMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/state$/);
+  if (req.method === "GET" && stateMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(stateMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+    if (!lobby.players.blue && !lobby.players.red) return sendJson(res, 404, { error: "Lobby is empty." });
+    if (auth.session.lobbyId !== lobby.id) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+    return sendJson(res, 200, { state: lobby.gameState, version: lobby.gameVersion, updatedBy: lobby.gameUpdatedBy });
+  }
+
+  if (req.method === "PUT" && stateMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(stateMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+    if (auth.session.lobbyId !== lobby.id || !auth.session.color) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+    if (!payload || typeof payload.state !== "object") return sendJson(res, 400, { error: "Game state is required." });
+
+    lobby.gameState = payload.state;
+    lobby.gameVersion += 1;
+    lobby.gameUpdatedBy = auth.session.color;
+    lobby.updatedAt = Date.now();
+    return sendJson(res, 200, { ok: true, version: lobby.gameVersion, updatedBy: lobby.gameUpdatedBy });
+  }
+
+  const chatMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/chat$/);
+  if (req.method === "GET" && chatMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(chatMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+    if (auth.session.lobbyId !== lobby.id) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+    return sendJson(res, 200, { messages: lobby.chat });
+  }
+
+  if (req.method === "POST" && chatMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(chatMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+    if (auth.session.lobbyId !== lobby.id || !auth.session.color) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+
+    const text = String(payload.text || "").trim().slice(0, 300);
+    if (!text) return sendJson(res, 400, { error: "Message is required." });
+    const message = {
+      id: crypto.randomBytes(8).toString("hex"),
+      color: auth.session.color,
+      name: auth.user.username,
+      text,
+      createdAt: Date.now(),
+    };
+    lobby.chat.push(message);
+    if (lobby.chat.length > MAX_CHAT_MESSAGES) lobby.chat = lobby.chat.slice(-MAX_CHAT_MESSAGES);
+    lobby.updatedAt = Date.now();
+    return sendJson(res, 201, { message });
+  }
+
+  const lobbyMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})$/);
+  if (req.method === "GET" && lobbyMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(lobbyMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+    return sendJson(res, 200, { lobby: publicLobby(lobby) });
+  }
+
+  return sendJson(res, 404, { error: "API route not found." });
+}
+
+function serveFile(req, res, url) {
+  const requestedPath = url.pathname === "/" ? "/login.html" : url.pathname;
+  const firstSegment = requestedPath.split("/").filter(Boolean)[0] || "";
+  if (["data", ".git", "node_modules"].includes(firstSegment) || requestedPath.endsWith(".toml") || requestedPath.endsWith(".service") || requestedPath.endsWith(".conf")) {
+    res.writeHead(404, securityHeaders());
+    res.end("Not found");
+    return;
+  }
+  const resolved = path.resolve(ROOT, `.${decodeURIComponent(requestedPath)}`);
+  if (!resolved.startsWith(ROOT)) {
+    res.writeHead(403, securityHeaders());
+    res.end("Forbidden");
+    return;
+  }
+
+  fs.readFile(resolved, (error, data) => {
+    if (error) {
+      res.writeHead(404, securityHeaders());
+      res.end("Not found");
+      return;
+    }
+    res.writeHead(200, {
+      "Content-Type": mimeTypes[path.extname(resolved)] || "application/octet-stream",
+      "Cache-Control": "no-store",
+      ...securityHeaders(),
+    });
+    res.end(data);
+  });
+}
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (req.method === "GET" && url.pathname === "/healthz") {
+    return sendJson(res, 200, { ok: true });
+  }
+  if (url.pathname.startsWith("/api/")) {
+    handleApi(req, res, url).catch((error) => {
+      console.error(error);
+      sendJson(res, 500, { error: "Server error." });
+    });
+    return;
+  }
+  serveFile(req, res, url);
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`Battlechess Armada multiplayer server running at http://${HOST}:${PORT}`);
+});
+
+setInterval(cleanupStaleSessions, 60 * 1000);

@@ -1,0 +1,9 @@
+.git
+.agents
+.codex
+data
+node_modules
+*.service
+nginx-battlechess.conf
+DEPLOYMENT.md
+FLY_DEPLOYMENT.md

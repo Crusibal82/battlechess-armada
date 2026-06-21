@@ -1,0 +1,13 @@
+{
+  "name": "battlechess-armada",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Battlechess Armada browser multiplayer prototype.",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check game.js && node --check login.js && node --check multiplayer.js"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
