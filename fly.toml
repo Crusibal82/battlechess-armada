@@ -1,35 +1,39 @@
-# Change this if the Fly app name is already taken.
-app = "battlechess-armada"
-primary_region = "ord"
+# fly.toml app configuration file generated for battlechess-armada-mozmrw on 2026-06-21T23:31:05Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'battlechess-armada-mozmrw'
+primary_region = 'iad'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  NODE_ENV = "production"
-  HOST = "0.0.0.0"
-  PORT = "8080"
-  BATTLECHESS_DATA_DIR = "/tmp/battlechess-armada"
+  BATTLECHESS_DATA_DIR = '/tmp/battlechess-armada'
+  HOST = '0.0.0.0'
+  NODE_ENV = 'production'
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [http_service.concurrency]
-    type = "requests"
-    soft_limit = 80
+    type = 'requests'
     hard_limit = 120
+    soft_limit = 80
 
   [[http_service.checks]]
-    grace_period = "5s"
-    interval = "30s"
-    method = "GET"
-    timeout = "5s"
-    path = "/healthz"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '5s'
+    method = 'GET'
+    path = '/healthz'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  size = 'shared-cpu-1x'
+  memory = '256mb'
