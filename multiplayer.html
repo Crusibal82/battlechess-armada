@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Battlechess Armada Lobbies</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="multiplayer.css" />
+  </head>
+  <body class="lobby-page">
+    <main class="app-shell">
+      <section class="topbar">
+        <div>
+          <h1>Battlechess Armada</h1>
+          <p id="statusLine">Choose a lobby, pick a fleet color, and wait for your opponent.</p>
+        </div>
+        <div class="toolbar">
+          <span id="playerBadge" class="player-badge">Not logged in</span>
+          <button id="refreshButton" type="button">Refresh</button>
+          <button id="logoutButton" type="button">Logout</button>
+        </div>
+      </section>
+
+      <section class="lobby-layout">
+        <section class="panel lobby-panel">
+          <h2>Available Lobbies</h2>
+          <div id="lobbyList" class="lobby-list"></div>
+        </section>
+
+        <aside class="panel room-panel">
+          <h2>Selected Lobby</h2>
+          <div id="roomSummary" class="ship-card muted">Select a lobby to see seats.</div>
+          <div class="phase-actions">
+            <button id="joinBlueButton" type="button" disabled>Join Blue</button>
+            <button id="joinRedButton" type="button" disabled>Join Red</button>
+            <button id="leaveButton" type="button" disabled>Leave</button>
+          </div>
+          <a id="enterGameLink" class="enter-link" href="#" hidden>Enter game room</a>
+        </aside>
+      </section>
+    </main>
+
+    <script src="multiplayer.js"></script>
+  </body>
+</html>

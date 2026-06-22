@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Battlechess Armada Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="Game controls">
+        <div>
+          <h1>Battlechess Armada</h1>
+          <p id="statusLine">Loading fleet...</p>
+        </div>
+        <div class="toolbar">
+          <label class="mode-select">
+            <span>Game Mode</span>
+            <select id="gameModeSelect">
+              <option value="classic">Classic Flagship</option>
+              <option value="remove-throne">Remove the Throne</option>
+              <option value="crush-frontline">Crush the Frontline</option>
+              <option value="board-wipe">Board Wipe</option>
+            </select>
+          </label>
+          <button id="confirmModeButton" type="button" hidden>Confirm Mode</button>
+          <button id="rulesButton" type="button">Rules</button>
+          <button id="newGameButton" type="button">New Game</button>
+          <button id="lockSetupButton" type="button">Lock Setup</button>
+          <button id="randomizeSetupButton" type="button" title="During deployment, randomly place your ships inside their legal setup zones.">Randomize Deployment</button>
+          <button id="endTurnButton" type="button">End Turn</button>
+          <button id="surrenderButton" type="button">Surrender</button>
+          <button id="leaveLobbyButton" type="button" hidden>Leave Lobby</button>
+        </div>
+      </section>
+
+      <section id="gameOverBanner" class="game-over-banner" aria-live="polite" hidden>
+        <span class="eyebrow">Game Over</span>
+        <strong id="gameOverMessage">Admiral Blue Wins</strong>
+      </section>
+
+      <section class="game-layout">
+        <aside class="panel">
+          <div class="turn-card">
+            <span class="eyebrow">Active Fleet</span>
+            <strong id="activePlayer">Admiral Blue</strong>
+            <span id="phaseName">Movement Phase</span>
+          </div>
+
+          <div class="phase-actions" aria-label="Phase actions">
+            <button id="resupplyButton" type="button" title="At the beginning of your turn, skip movement and targeting to draw 1 Special Action card. Available starting on turn 3.">Resupply</button>
+            <button id="reconButton" type="button" title="Target a legal coordinate to scan for enemy ships, mines, or hidden contacts without firing.">Recon</button>
+            <button id="mineButton" type="button" title="Place a hidden mine on one coordinate from the ship's traveled path after it moves.">Deploy Mine</button>
+            <button id="repairButton" type="button" title="During Targeting Phase, roll a 50/50 chance to restore 1 HP to the moved non-pawn ship. Cannot be used again on the next turn if selected.">Repair Crew</button>
+            <button id="steadyButton" type="button" title="During Targeting Phase, hold fire so this same ship gains +1 damage on its next attack. Cannot be used again on the next turn if selected.">Steady Shot</button>
+          </div>
+
+          <div>
+            <h2>Command Orders</h2>
+            <div class="phase-actions" aria-label="Command order actions">
+              <button id="speedButton" type="button" title="King command: order one friendly ship within 3 squares to immediately move with +1 movement.">Full Speed</button>
+              <button id="fireButton" type="button" title="King command: order one friendly ship within 3 squares to gain +1 attack damage this turn.">Concentrated Fire</button>
+              <button id="defenseButton" type="button" title="King command: order one friendly ship within 3 squares to take a defensive maneuver and reduce incoming damage this turn.">Defensive Maneuver</button>
+            </div>
+          </div>
+
+          <div>
+            <h2>Special Action Cards</h2>
+            <div id="cardHand" class="card-hand"></div>
+          </div>
+
+          <div>
+            <h2>Selected Ship</h2>
+            <div id="selectedShip" class="ship-card muted">Select one of your ships.</div>
+          </div>
+
+        </aside>
+
+        <section class="board-wrap" aria-label="Battle board">
+          <div class="board-with-winglets">
+            <aside class="winglet winglet-left" aria-label="Opponent eliminated pieces">
+              <h2>Opponent Eliminated Pieces</h2>
+              <div id="capturedWinglet" class="winglet-grid"></div>
+            </aside>
+
+            <div class="board-core">
+              <div class="coordinates top-coordinates" id="fileLabels"></div>
+              <div class="board-row">
+                <div class="coordinates side-coordinates" id="rankLabels"></div>
+                <div id="board" class="board" role="grid" aria-label="12 by 12 Battlechess Armada board"></div>
+                <div class="coordinates side-coordinates right-rank-labels" id="rightRankLabels"></div>
+              </div>
+              <div class="coordinates bottom-coordinates" id="bottomFileLabels"></div>
+            </div>
+
+            <aside class="winglet winglet-right" aria-label="Player controlled pieces health">
+              <h2>Player Controlled Pieces</h2>
+              <div id="healthWinglet" class="winglet-grid"></div>
+            </aside>
+          </div>
+
+          <div id="chatPanel" class="chat-panel board-chat" hidden>
+            <h2>Lobby Chat</h2>
+            <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+            <form id="chatForm" class="chat-form">
+              <input id="chatInput" name="message" maxlength="300" autocomplete="off" placeholder="Message opponent..." />
+              <button type="submit">Send</button>
+            </form>
+          </div>
+        </section>
+
+        <aside class="panel log-panel">
+          <h2>Battle Log</h2>
+          <ol id="battleLog" class="battle-log"></ol>
+        </aside>
+      </section>
+    </main>
+
+    <dialog id="rulesDialog" class="rules-dialog">
+      <div class="rules-modal">
+        <div class="rules-header">
+          <div>
+            <span class="eyebrow">Reference</span>
+            <strong>Battlechess Armada Rules</strong>
+          </div>
+          <button id="closeRulesButton" type="button" aria-label="Close rules">Close</button>
+        </div>
+        <div id="rulesContent" class="rules-content"></div>
+      </div>
+    </dialog>
+
+    <dialog id="reactionDialog" class="reaction-dialog">
+      <div class="reaction-modal">
+        <div>
+          <span class="eyebrow">Instant Response</span>
+          <strong id="reactionTitle">Play a Special Action card?</strong>
+          <p id="reactionText">Select a friendly ship for cards that need one, play an Instant card, or pass.</p>
+        </div>
+        <div id="reactionCards" class="reaction-cards"></div>
+        <div class="reaction-actions">
+          <button id="reactionPassButton" type="button">Pass</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="game.js"></script>
+  </body>
+</html>
