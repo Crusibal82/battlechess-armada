@@ -28,10 +28,10 @@ The current game keeps lobby/game/chat state in memory, so no database is requir
 To enable the private admin lobby watcher and bug-report viewer, add your exact login username:
 
 ```powershell
-fly secrets set BATTLECHESS_ADMIN_USERS=YourUsername
+fly secrets set BATTLECHESS_ADMIN_USERS=BCAadminCrusibal
 ```
 
-Multiple admin usernames can be comma-separated.
+By default, the server only allows `BCAadminCrusibal` as an admin username. Multiple admin usernames can be comma-separated if you intentionally add more later.
 
 ## First-Time Deploy
 

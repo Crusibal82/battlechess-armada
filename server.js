@@ -15,7 +15,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 8;
 const AUTH_TOKEN_SECRET = process.env.BATTLECHESS_AUTH_SECRET || "battlechess-armada-dev-secret";
 const ADMIN_USERS = new Set(
-  String(process.env.BATTLECHESS_ADMIN_USERS || "")
+  String(process.env.BATTLECHESS_ADMIN_USERS || "BCAadminCrusibal")
     .split(",")
     .map((name) => name.trim().toLowerCase())
     .filter(Boolean),

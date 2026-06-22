@@ -2501,7 +2501,28 @@ function visibleLogEntry(entry) {
     return `${enemyName} repositioned a ship during deployment.`;
   }
 
-  return entry;
+  return redactHiddenEnemyShipNames(entry, enemy);
+}
+
+function redactHiddenEnemyShipNames(entry, enemy) {
+  if (isRevealLogEntry(entry)) return entry;
+  const enemyName = playerName(enemy);
+  let redacted = entry;
+  for (const def of Object.values(PIECES)) {
+    redacted = redacted.replaceAll(`${enemyName} ${def.title}`, `${enemyName} hidden ship`);
+  }
+  return redacted;
+}
+
+function isRevealLogEntry(entry) {
+  return (
+    entry.includes(" rammed ") ||
+    entry.includes("Forward Probe") ||
+    entry.includes("Sensor Sweep") ||
+    entry.includes("Sacrificial Mark") ||
+    entry.includes("revealed") ||
+    entry.includes("recon at")
+  );
 }
 
 function updateButtons() {
