@@ -13,6 +13,7 @@ const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const MAX_CHAT_MESSAGES = 80;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 8;
+const AUTH_TOKEN_SECRET = process.env.BATTLECHESS_AUTH_SECRET || "battlechess-armada-dev-secret";
 const loginAttempts = new Map();
 
 const lobbies = Array.from({ length: MAX_LOBBIES }, (_, index) => ({
@@ -96,10 +97,55 @@ function publicUser(user) {
   return { id: user.id, username: user.username };
 }
 
+function base64Url(input) {
+  return Buffer.from(input).toString("base64url");
+}
+
+function signTokenPayload(payload) {
+  return crypto.createHmac("sha256", AUTH_TOKEN_SECRET).update(payload).digest("base64url");
+}
+
+function createAuthToken(user) {
+  const payload = base64Url(JSON.stringify({
+    userId: user.id,
+    username: user.username,
+    createdAt: Date.now(),
+  }));
+  return `${payload}.${signTokenPayload(payload)}`;
+}
+
+function verifyAuthToken(token) {
+  const [payload, signature] = String(token || "").split(".");
+  if (!payload || !signature) return null;
+  const expected = signTokenPayload(payload);
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  } catch {
+    return null;
+  }
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!session.userId || !session.username || !session.createdAt) return null;
+    if (Date.now() - session.createdAt > SESSION_TIMEOUT_MS) return null;
+    return {
+      userId: session.userId,
+      username: session.username,
+      createdAt: session.createdAt,
+      lastSeenAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function authFromRequest(req) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  const session = authSessions.get(token);
+  let session = authSessions.get(token);
+  if (!session) {
+    session = verifyAuthToken(token);
+    if (session) authSessions.set(token, session);
+  }
   if (!session) return null;
   session.lastSeenAt = Date.now();
   const user = { id: session.userId, username: session.username };
@@ -220,7 +266,7 @@ async function handleApi(req, res, url) {
     }
     clearLoginFailures(req, username);
     const user = { id: crypto.randomBytes(12).toString("hex"), username };
-    const token = crypto.randomBytes(24).toString("hex");
+    const token = createAuthToken(user);
     authSessions.set(token, { userId: user.id, username: user.username, createdAt: Date.now(), lastSeenAt: Date.now() });
     return sendJson(res, 200, { token, user: publicUser(user) });
   }

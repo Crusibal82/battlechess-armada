@@ -98,36 +98,36 @@ const STARTING_LAYOUT = {
 };
 
 const CARD_LIBRARY = [
-  { id: "forward-probe", name: "Forward Probe", phase: "Movement Phase", text: "Advance up to 2 tiles, scan up to 3 tiles ahead (reveals identity of hidden units/traps); +1 move next turn.", type: "forwardProbe" },
-  { id: "coordinated-volley", name: "Coordinated Volley", phase: "Targeting Phase", text: "Fire once with +1 dmg per friendly piece within 2x2 square of the targeting piece (max +2).", type: "coordinatedVolley" },
-  { id: "blockade-drift", name: "Blockade Drift", phase: "Movement Phase", text: "Move 2 tiles in any direction.", type: "blockadeDrift" },
-  { id: "sacrificial-mark", name: "Sacrificial Mark", phase: "Instant", text: "Mark target within 2 tile range; if this piece is destroyed, deal 2 dmg to marked unit. Lasts for 2 turns.", type: "sacrificialMark" },
-  { id: "promotion-burst", name: "Promotion Burst", phase: "Targeting Phase", text: "On reaching far rank, fire once 1 tile away from the piece in all directions.", type: "promotionBurst" },
-  { id: "iron-advance", name: "Iron Advance", phase: "Movement Phase", text: "Advance up to 3 tiles straight, bypassing all units; ends phase.", type: "ironAdvance" },
+  { id: "forward-probe", name: "Forward Probe", phase: "Movement Phase", text: "+2 movement, then scan 3 tiles forward and forward-diagonal to reveal enemy ships or mines; +1 movement next turn.", type: "forwardProbe" },
+  { id: "coordinated-volley", name: "Coordinated Volley", phase: "Targeting Phase", text: "Fire once with +1 damage per nearby friendly ship within support range (max +2).", type: "coordinatedVolley" },
+  { id: "blockade-drift", name: "Blockade Drift", phase: "Movement Phase", text: "+2 movement in any direction, ignoring the ship's normal movement pattern for this move.", type: "blockadeDrift" },
+  { id: "sacrificial-mark", name: "Sacrificial Mark", phase: "Instant", text: "Mark a friendly ship within 2 tiles for 2 of your turns; if destroyed by enemy fire, its attacker takes 2 damage.", type: "sacrificialMark" },
+  { id: "promotion-burst", name: "Promotion Burst", phase: "Targeting Phase", text: "Only from the opponent's backline: fire one 1-damage burst in each direction.", type: "promotionBurst" },
+  { id: "iron-advance", name: "Iron Advance", phase: "Movement Phase", text: "+3 straight-line movement, may pass friendly ships, then immediately ends the Movement Phase.", type: "ironAdvance" },
   { id: "line-breaker-salvo", name: "Line Breaker Salvo", phase: "Targeting Phase", text: "Fire twice in same row or column; must target different tiles; +1 dmg if both hit.", type: "lineBreaker" },
-  { id: "hull-lockdown", name: "Hull Lockdown", phase: "Movement Phase", text: "Ignore all damage this turn and become immobile until next turn.", type: "hullLockdown" },
+  { id: "hull-lockdown", name: "Hull Lockdown", phase: "Movement Phase", text: "Ignore all damage done to this ship until your next turn.", type: "hullLockdown" },
   { id: "overlapping-fields", name: "Overlapping Fields", phase: "Targeting Phase", text: "Fire once with +1 dmg per friendly ship in the same row or column (max +2).", type: "overlappingFields" },
   { id: "counter-battery", name: "Counter-Battery", phase: "Instant", text: "If attacked and survives, immediately fire back at attacker (once per match).", type: "counterBattery" },
-  { id: "ghost-wake", name: "Ghost Wake", phase: "Movement Phase", text: "Move diagonally over enemy units; may land on empty square or continue 1 more tile if blocked.", type: "ghostWake" },
-  { id: "vector-shift", name: "Vector Shift", phase: "Targeting Phase", text: "Instantly shift diagonally 1 tile, then fire at any visible target; perform steady shot flip +1 dmg if successful.", type: "vectorShift" },
-  { id: "refraction-shot", name: "Refraction Shot", phase: "Targeting Phase", text: "Fire at target, then ricochet to second diagonal tile behind it within 2 tile max; second hit deals 1 dmg max.", type: "refractionShot" },
-  { id: "sensor-sweep", name: "Sensor Sweep", phase: "Movement Phase", text: "Reveal all units along one diagonal (in both directions); +1 move next turn if 3+ detected.", type: "sensorSweep" },
+  { id: "ghost-wake", name: "Ghost Wake", phase: "Movement Phase", text: "Move diagonally within this ship's movement; if an enemy occupies the endpoint, move 1 more square beyond it without collision.", type: "ghostWake" },
+  { id: "vector-shift", name: "Vector Shift", phase: "Targeting Phase", text: "Move 1 tile diagonally, then fire on an enemy-occupied square; +1 damage on a 50/50 roll.", type: "vectorShift" },
+  { id: "refraction-shot", name: "Refraction Shot", phase: "Targeting Phase", text: "Fire at a target, then ricochet up to 2 diagonal squares from the hit ship. Ricochet hits deal 1 damage.", type: "refractionShot" },
+  { id: "sensor-sweep", name: "Sensor Sweep", phase: "Movement Phase", text: "Reveal occupied diagonal squares, but not identity, in all diagonal directions; +1 movement next turn if 3+ units/traps are found.", type: "sensorSweep" },
   { id: "evasive-roll", name: "Evasive Roll", phase: "Instant", text: "Dodge diagonally 1 tile when targeted; cancels attack if destination is empty.", type: "evasiveRoll" },
-  { id: "surfacing-strike", name: "Surfacing Strike", phase: "Movement Phase", text: "Instantly Knight-move and fire at a destination tile within range; +1 dmg to base dmg.", type: "surfacingStrike" },
-  { id: "flank-and-fade", name: "Flank-and-Fade", phase: "Targeting Phase", text: "Fire at Knight reachable destination, then Knight-move to any reachable square (must be unoccupied).", type: "flankFade" },
-  { id: "overwatch-ambush", name: "Overwatch Ambush", phase: "Instant", text: "Set trap: auto-fire for 1 dmg once enemy enters a 3x3 from the piece; expires after 2 turns or activation.", type: "overwatchAmbush" },
+  { id: "surfacing-strike", name: "Surfacing Strike", phase: "Movement Phase", text: "Move like a Knight, then fire like a Knight with +1 damage. Does not consume the Targeting Phase.", type: "surfacingStrike" },
+  { id: "flank-and-fade", name: "Flank-and-Fade", phase: "Targeting Phase", text: "Fire like a Knight, then move like a Knight to an unoccupied square.", type: "flankFade" },
+  { id: "overwatch-ambush", name: "Overwatch Ambush", phase: "Instant", text: "Place a 3x3 trap zone within targeting range; first enemy entering it takes 1 damage. Lasts 2 of your turns.", type: "overwatchAmbush" },
   { id: "feint", name: "Feint", phase: "Movement Phase", text: "Reveals but does not provide identity of tile within any Knight-reachable square; may cancel move if trap/enemy are detected.", type: "feint" },
-  { id: "chain-assault", name: "Chain Assault", phase: "Targeting Phase", text: "Fire at target, then instantly Knight-move to a second target within range and fire again (2 hits total).", type: "chainAssault" },
+  { id: "chain-assault", name: "Chain Assault", phase: "Targeting Phase", text: "Fire using normal targeting rules, Knight-move to an empty square, then fire again using normal targeting rules.", type: "chainAssault" },
   { id: "broadside-barrage", name: "Broadside Barrage", phase: "Targeting Phase", text: "Fire at 3 consecutive tiles in a straight line (H/V).", type: "broadside" },
   { id: "power-push", name: "Power Push", phase: "Movement Phase", text: "Move up to 3 tiles straight; may pass adjacent to enemies but not through. If enemy ship is rammed +2 dmg to enemy ship and does not reveal the piece unless destroyed.", type: "powerPush" },
-  { id: "suppressive-fire", name: "Suppressive Fire", phase: "Targeting Phase", text: "Fire at any 3x3 zone; enemy cannot move or target any tile in that zone on their next turn.", type: "suppressiveFire" },
-  { id: "overcharge-cannons", name: "Overcharge Cannons", phase: "Instant", text: "After a successful hit, immediately fire at another tile; second shot deals +1 dmg max.", type: "overcharge" },
-  { id: "iron-bulwark", name: "Iron Bulwark", phase: "Movement Phase", text: "Activate shield: piece ignores all single-hit attacks. Expires after 2 turns or activation.", type: "ironBulwark" },
+  { id: "suppressive-fire", name: "Suppressive Fire", phase: "Targeting Phase", text: "Choose a 3x3 zone reachable by this ship's targeting rules; enemies cannot move or target in that zone until their next turn.", type: "suppressiveFire" },
+  { id: "overcharge-cannons", name: "Overcharge Cannons", phase: "Instant", text: "After a successful hit, immediately fire at another legal target tile with +1 damage.", type: "overcharge" },
+  { id: "iron-bulwark", name: "Iron Bulwark", phase: "Movement Phase", text: "This ship ignores single-hit attacks for 2 of your turns.", type: "ironBulwark" },
   { id: "royal-command", name: "Royal Command", phase: "Movement Phase", text: "Instantly reposition one friendly within 3 squares; ignores movement rules.", type: "royalCommand" },
-  { id: "defensive-muster", name: "Defensive Muster", phase: "Targeting Phase", text: "Adjacent allies gain Shielded status: ignore first hit this turn, even from AoE/specials.", type: "defensiveMuster" },
-  { id: "flagship-barrage", name: "Flagship Barrage", phase: "Targeting Phase", text: "Fire 2 shots at any tiles within 3 squares; may target same tile twice.", type: "flagshipBarrage" },
-  { id: "last-stand", name: "Last Stand", phase: "Instant", text: "When reduced to 1 HP, immediately take a bonus turn (move + fire); cannot use another special.", type: "lastStand" },
-  { id: "call-the-guard", name: "Call the Guard", phase: "Movement Phase", text: "Summon one friendly within 3 squares to any adjacent tile; ignores obstacles and enemy zones.", type: "royalCommand" },
+  { id: "defensive-muster", name: "Defensive Muster", phase: "Targeting Phase", text: "Adjacent allies ignore the first damage from any source until your next turn.", type: "defensiveMuster" },
+  { id: "flagship-barrage", name: "Flagship Barrage", phase: "Targeting Phase", text: "Fire 2 shots at any reachable square of this ship; the same tile may be selected twice.", type: "flagshipBarrage" },
+  { id: "last-stand", name: "Last Stand", phase: "Instant", text: "Non-pawn reduced to 1 HP may take a bonus move and target turn. No more special cards this turn.", type: "lastStand" },
+  { id: "call-the-guard", name: "Call the Guard", phase: "Movement Phase", text: "Move a friendly ship within 3 squares to any adjacent tile of the caster, ignoring traps, mines, and enemy currents.", type: "callGuard" },
 ];
 
 const GAME_MODES = {
@@ -157,6 +157,7 @@ const state = {
   pieces: [],
   selectedId: null,
   movedPieceId: null,
+  actionTaken: false,
   lastMove: null,
   actionMode: null,
   commandMode: null,
@@ -167,6 +168,7 @@ const state = {
   commandBonus: null,
   commandBuffs: {},
   moveBonus: { blue: 0, red: 0 },
+  nextMoveBonus: { blue: 0, red: 0 },
   attackBonus: { blue: 0, red: 0 },
   rangeBonus: { blue: 0, red: 0 },
   torpedo: { blue: false, red: false },
@@ -186,10 +188,15 @@ const state = {
   counterBattery: new Set(),
   overwatch: [],
   shielded: new Set(),
+  timedShields: [],
   invulnerable: new Set(),
+  hullLockdowns: [],
+  bulwarks: [],
   immobile: new Set(),
   suppressiveZones: [],
   lastStand: new Set(),
+  lastStandLocks: { blue: false, red: false },
+  lastSuccessfulHit: null,
   sunkShips: [],
   gameMode: "classic",
   gameModeConfirmed: false,
@@ -279,6 +286,7 @@ function newGame() {
   state.pieces = [];
   state.selectedId = null;
   state.movedPieceId = null;
+  state.actionTaken = false;
   state.lastMove = null;
   state.actionMode = null;
   state.commandMode = null;
@@ -289,6 +297,7 @@ function newGame() {
   state.commandBonus = null;
   state.commandBuffs = {};
   state.moveBonus = { blue: 0, red: 0 };
+  state.nextMoveBonus = { blue: 0, red: 0 };
   state.attackBonus = { blue: 0, red: 0 };
   state.rangeBonus = { blue: 0, red: 0 };
   state.torpedo = { blue: false, red: false };
@@ -308,10 +317,15 @@ function newGame() {
   state.counterBattery = new Set();
   state.overwatch = [];
   state.shielded = new Set();
+  state.timedShields = [];
   state.invulnerable = new Set();
+  state.hullLockdowns = [];
+  state.bulwarks = [];
   state.immobile = new Set();
   state.suppressiveZones = [];
   state.lastStand = new Set();
+  state.lastStandLocks = { blue: false, red: false };
+  state.lastSuccessfulHit = null;
   state.sunkShips = [];
   state.gameMode = gameModeSelect.value;
   state.gameModeConfirmed = !isMultiplayer;
@@ -771,6 +785,7 @@ function legalMineSquares() {
 }
 
 function moveSelectedTo(piece, x, y) {
+  if (state.movedPieceId) return;
   const legal = legalSquares(piece, "move");
   if (!squareInList(x, y, legal)) return;
   if (state.steadyShot[piece.side] && state.steadyShot[piece.side] !== piece.id) {
@@ -791,13 +806,7 @@ function moveSelectedTo(piece, x, y) {
     state.movedPieceId = piece.id;
     state.selectedId = piece.id;
     promoteIfNeeded(piece);
-    if (!state.gameOver) {
-      if (startReactionWindow("actionPhase", "before the Targeting Phase")) {
-        render();
-        return;
-      }
-      state.phase = "action";
-    }
+    if (!state.gameOver) addLog("Movement complete. Play any Movement Phase cards, then begin Targeting.");
     render();
     return;
   }
@@ -819,13 +828,7 @@ function moveSelectedTo(piece, x, y) {
   state.movedPieceId = piece.id;
   state.selectedId = piece.id;
   promoteIfNeeded(piece);
-  if (!state.gameOver) {
-    if (startReactionWindow("actionPhase", "before the Targeting Phase")) {
-      render();
-      return;
-    }
-    state.phase = "action";
-  }
+  if (!state.gameOver) addLog("Movement complete. Play any Movement Phase cards, then begin Targeting.");
   render();
 }
 
@@ -947,6 +950,7 @@ function promoteIfNeeded(piece) {
 }
 
 function attackSquare(piece, x, y) {
+  if (state.actionTaken) return;
   const legal = legalSquares(piece, "target");
   if (!squareInList(x, y, legal)) return;
   performShot(piece, x, y, { finish: true });
@@ -971,6 +975,7 @@ function performShot(piece, x, y, options = {}) {
 
   if (state.currentAffectedPieceId === piece.id && Math.random() >= 0.5) {
     addLog(`${attackerDescription(piece)} fired from Shifting Currents and the shot drifted wide.`);
+    state.lastSuccessfulHit = null;
     if (finish) clearActionModifiers(piece.side);
     if (finish) finishAction();
     return false;
@@ -980,6 +985,7 @@ function performShot(piece, x, y, options = {}) {
   if (mine && mine.side !== piece.side) {
     state.mines = state.mines.filter((m) => m !== mine);
     addLog(`${playerName(piece.side)} fired on ${coord(x, y)} and detonated a hidden mine.`);
+    state.lastSuccessfulHit = null;
     if (finish) finishAction();
     return true;
   }
@@ -987,6 +993,7 @@ function performShot(piece, x, y, options = {}) {
   const target = pieceAt(x, y);
   if (!target) {
     addLog(`${playerName(piece.side)} fired on ${coord(x, y)} and missed.`);
+    state.lastSuccessfulHit = null;
     if (finish) finishAction();
     return false;
   }
@@ -1000,9 +1007,11 @@ function performShot(piece, x, y, options = {}) {
     state.shielded.delete(target.id);
     addLog(`${attackerDescription(target)} ignored the hit with Shielded status.`);
   }
-  const appliedDamage = damagePiece(target, damage, "attack");
+  const appliedDamage = damagePiece(target, damage, "attack", piece);
+  state.lastSuccessfulHit = appliedDamage > 0 ? { side: piece.side, pieceId: piece.id, x, y } : null;
   const targetName = target.revealedTo.has(piece.side) ? attackerDescription(target) : `${playerName(target.side)} hidden ship`;
   addLog(`${attackerDescription(piece)} hit ${targetName} at ${coord(x, y)} for ${appliedDamage} damage.`);
+  if (state.active !== piece.side || state.gameOver) return appliedDamage > 0;
   if (appliedDamage > 0 && targetHpBefore > appliedDamage && state.counterBattery.has(target.id) && state.pieces.some((candidate) => candidate.id === target.id)) {
     state.counterBattery.delete(target.id);
     performShot(target, piece.x, piece.y, { finish: false });
@@ -1039,13 +1048,42 @@ function handleSpecialClick(x, y) {
     return;
   }
   if (state.specialMode === "royalCommand") {
-    if (distance(piece, { x, y }) <= 3 && !pieceAt(x, y)) {
+    const picks = state.specialData.picks;
+    if (!picks.length) {
+      const target = pieceAt(x, y);
+      if (!target || target.side !== piece.side || target.id === piece.id || distance(piece, target) > 3) return;
+      picks.push({ pieceId: target.id, casterId: piece.id });
+      state.specialData.pieceId = target.id;
+      addLog(`Royal Command: select the reposition destination for ${attackerDescription(target)}.`);
+      render();
+      return;
+    }
+    const caster = state.pieces.find((candidate) => candidate.id === picks[0].casterId);
+    if (caster && distance(caster, { x, y }) <= 3 && !pieceAt(x, y)) {
       piece.x = x;
       piece.y = y;
       addLog(`${attackerDescription(piece)} was repositioned by Royal Command to ${coord(x, y)}.`);
-      clearSpecialMode();
-      render();
+      finishCardEffect(piece);
     }
+    return;
+  }
+  if (state.specialMode === "callGuard") {
+    const picks = state.specialData.picks;
+    if (!picks.length) {
+      const target = pieceAt(x, y);
+      if (!target || target.side !== piece.side || target.id === piece.id || distance(piece, target) > 3) return;
+      picks.push({ pieceId: target.id, casterId: piece.id });
+      state.specialData.pieceId = target.id;
+      addLog(`Call the Guard: select an empty square adjacent to ${attackerDescription(piece)}.`);
+      render();
+      return;
+    }
+    const caster = state.pieces.find((candidate) => candidate.id === picks[0].casterId);
+    if (!caster || distance(caster, { x, y }) > 1 || pieceAt(x, y)) return;
+    piece.x = x;
+    piece.y = y;
+    addLog(`${attackerDescription(piece)} answered Call the Guard at ${coord(x, y)}.`);
+    finishCardEffect(piece);
     return;
   }
   if (state.specialMode === "lineBreaker") {
@@ -1060,8 +1098,12 @@ function handleSpecialClick(x, y) {
     }
     const first = picks[0];
     if ((first.x !== x && first.y !== y) || (first.x === x && first.y === y)) return;
-    const firstHit = performShot(piece, first.x, first.y, { finish: false });
-    const secondHit = performShot(piece, x, y, { finish: false, damage: firstHit ? 2 : 1 });
+    const bothTargetsOccupied =
+      pieceAt(first.x, first.y)?.side === enemyOf(piece.side) &&
+      pieceAt(x, y)?.side === enemyOf(piece.side);
+    const shotDamage = bothTargetsOccupied ? 2 : 1;
+    const firstHit = performShot(piece, first.x, first.y, { finish: false, damage: shotDamage });
+    const secondHit = performShot(piece, x, y, { finish: false, damage: shotDamage });
     addLog(`Line Breaker Salvo resolved${firstHit && secondHit ? " with both shots on target" : ""}.`);
     clearActionModifiers(piece.side);
     finishCardEffect(piece);
@@ -1096,6 +1138,15 @@ function handleSpecialClick(x, y) {
     if (!squareInList(x, y, legal)) return;
     performShot(piece, x, y, { damage: 2, finish: false });
     addLog("Overcharge Cannons fired an extra shot.");
+    state.lastSuccessfulHit = null;
+    clearActionModifiers(piece.side);
+    finishCardEffect(piece);
+    return;
+  }
+  if (state.specialMode === "surfacingStrike" && state.specialData.picks.length) {
+    if (!squareInList(x, y, knightSquares(piece)) || pieceAt(x, y)?.side === piece.side) return;
+    performShot(piece, x, y, { damage: 2, finish: false });
+    addLog("Surfacing Strike fired a Knight-pattern shot for +1 damage.");
     clearActionModifiers(piece.side);
     finishCardEffect(piece);
     return;
@@ -1115,21 +1166,31 @@ function handleSpecialClick(x, y) {
     piece.y = y;
     resolveMineEntry(piece);
     resolveCurrentEntry(piece, from, { x, y });
+    resolveOverwatch(piece);
+    if (!state.pieces.some((candidate) => candidate.id === piece.id) || state.gameOver || state.active !== piece.side) {
+      render();
+      return;
+    }
     state.movedPieceId = piece.id;
     state.selectedId = piece.id;
     addLog(`${attackerDescription(piece)} moved to ${coord(piece.x, piece.y)} with ${state.specialData.cardName}.`);
     if (state.specialMode === "forwardProbe") {
       revealAhead(piece, from, 3);
-      state.moveBonus[piece.side] += 1;
+      state.nextMoveBonus[piece.side] += 1;
     }
     if (state.specialMode === "surfacingStrike") {
-      state.attackBonus[piece.side] += 1;
-      state.torpedo[piece.side] = true;
-      state.phase = "action";
+      state.specialData.picks.push({ x: piece.x, y: piece.y });
+      addLog("Surfacing Strike: select a Knight-fire target.");
+      render();
+      return;
     } else if (state.specialMode === "powerPush") {
       state.phase = "action";
     } else if (state.specialMode === "ironAdvance") {
-      finishCardEffect(piece);
+      clearSpecialMode();
+      state.phase = "action";
+      state.actionMode = null;
+      addLog("Iron Advance ended the Movement Phase.");
+      render();
       return;
     } else {
       state.phase = "action";
@@ -1137,7 +1198,7 @@ function handleSpecialClick(x, y) {
     finishCardEffect(piece);
     return;
   }
-  if (["refractionShot", "flankFade", "chainAssault", "flagshipBarrage", "suppressiveFire", "sacrificialMark"].includes(state.specialMode)) {
+  if (["refractionShot", "flankFade", "chainAssault", "flagshipBarrage", "suppressiveFire", "sacrificialMark", "overwatchAmbush"].includes(state.specialMode)) {
     resolveTargetSpecial(piece, x, y);
     return;
   }
@@ -1148,14 +1209,14 @@ function handleSpecialClick(x, y) {
       piece.x = x;
       piece.y = y;
       picks.push({ x, y });
-      state.rangeBonus[piece.side] += 8;
-      if (Math.random() >= 0.5) state.attackBonus[piece.side] += 1;
-      addLog(`${attackerDescription(piece)} shifted diagonally. Select any visible target.`);
+      addLog(`${attackerDescription(piece)} shifted diagonally. Select an enemy-occupied target.`);
       render();
       return;
     }
-    if (!squareInList(x, y, legalSquares(piece, "target"))) return;
-    performShot(piece, x, y, { finish: false });
+    if (!squareInList(x, y, legalSquares(piece, "target")) || pieceAt(x, y)?.side !== enemyOf(piece.side)) return;
+    const bonus = Math.random() >= 0.5 ? 1 : 0;
+    performShot(piece, x, y, { damage: 1 + bonus, finish: false });
+    addLog(`Vector Shift ${bonus ? "added +1 damage" : "did not add bonus damage"}.`);
     clearActionModifiers(piece.side);
     finishCardEffect(piece);
   }
@@ -1176,8 +1237,6 @@ function finishCardEffect(piece = specialPiece()) {
   }
   if (returnPhase === "move" || returnPhase === "commandMove") {
     state.phase = returnPhase;
-    state.movedPieceId = null;
-    state.lastMove = null;
     state.actionMode = null;
     if (piece?.side === state.active) state.selectedId = piece.id;
   } else if (returnPhase === "action") {
@@ -1199,32 +1258,44 @@ function specialTargets() {
       .filter((sq) => isInside(sq.x, sq.y) && !pieceAt(sq.x, sq.y));
   }
   if (state.specialMode === "royalCommand") {
+    const picks = state.specialData?.picks || [];
+    if (!picks.length) return radiusSquares(piece, 3, { friendlyOnly: true });
+    const caster = state.pieces.find((candidate) => candidate.id === picks[0].casterId);
+    if (!caster) return [];
     const squares = [];
     for (let dx = -3; dx <= 3; dx++) {
       for (let dy = -3; dy <= 3; dy++) {
-        const x = piece.x + dx;
-        const y = piece.y + dy;
-        if ((dx || dy) && isInside(x, y) && distance(piece, { x, y }) <= 3 && !pieceAt(x, y)) squares.push({ x, y });
+        const x = caster.x + dx;
+        const y = caster.y + dy;
+        if ((dx || dy) && isInside(x, y) && distance(caster, { x, y }) <= 3 && !pieceAt(x, y)) squares.push({ x, y });
       }
     }
     return squares;
   }
+  if (state.specialMode === "callGuard") {
+    const picks = state.specialData?.picks || [];
+    if (!picks.length) return radiusSquares(piece, 3, { friendlyOnly: true });
+    const caster = state.pieces.find((candidate) => candidate.id === picks[0].casterId);
+    if (!caster) return [];
+    return radiusSquares(caster, 1, { emptyOnly: true });
+  }
   if (["lineBreaker", "broadside", "overcharge"].includes(state.specialMode)) return legalSquares(piece, "target");
-  if (state.specialMode === "forwardProbe") return raySquares(piece, getForwardStep(piece.side), 2, { emptyOnly: true });
-  if (state.specialMode === "blockadeDrift") return radiusSquares(piece, 2, { emptyOnly: true });
-  if (state.specialMode === "ironAdvance") return straightSquares(piece, 3, { emptyOnly: true, bypass: true });
-  if (state.specialMode === "ghostWake") return diagonalSquares(piece, 5, { emptyOnly: true, bypass: true });
-  if (state.specialMode === "surfacingStrike") return knightSquares(piece).filter((sq) => !pieceAt(sq.x, sq.y));
+  if (state.specialMode === "forwardProbe") return movementSquaresWithBonus(piece, 2);
+  if (state.specialMode === "blockadeDrift") return anyDirectionSquares(piece, PIECES[piece.type].moveRange + 2, { emptyOnly: true });
+  if (state.specialMode === "ironAdvance") return straightSquares(piece, PIECES[piece.type].moveRange + 3, { emptyOnly: true, passFriendly: true });
+  if (state.specialMode === "ghostWake") return ghostWakeSquares(piece);
+  if (state.specialMode === "surfacingStrike" && !state.specialData?.picks?.length) return knightSquares(piece).filter((sq) => !pieceAt(sq.x, sq.y));
+  if (state.specialMode === "surfacingStrike") return knightSquares(piece).filter((sq) => !sameSideAt(piece.side, sq.x, sq.y));
   if (state.specialMode === "powerPush") return straightSquares(piece, 3, { emptyOrEnemy: true, bypass: false });
   if (state.specialMode === "vectorShift" && !state.specialData?.picks?.length) {
     return getDirectionalSteps("diagonal", piece.side)
       .map(([dx, dy]) => ({ x: piece.x + dx, y: piece.y + dy }))
       .filter((sq) => isInside(sq.x, sq.y) && !pieceAt(sq.x, sq.y));
   }
-  if (state.specialMode === "vectorShift") return legalSquares(piece, "target");
+  if (state.specialMode === "vectorShift") return legalSquares(piece, "target").filter((sq) => pieceAt(sq.x, sq.y)?.side === enemyOf(piece.side));
   if (["refractionShot", "flankFade", "chainAssault", "flagshipBarrage"].includes(state.specialMode)) return legalSquares(piece, "target");
-  if (state.specialMode === "suppressiveFire") return allBoardSquares();
-  if (state.specialMode === "sacrificialMark") return radiusSquares(piece, 2, { enemyOnly: true });
+  if (["suppressiveFire", "overwatchAmbush"].includes(state.specialMode)) return legalSquares(piece, "target");
+  if (state.specialMode === "sacrificialMark") return radiusSquares(piece, 2, { friendlyOnly: true });
   return [];
 }
 
@@ -1242,37 +1313,57 @@ function revealKnightReachableOccupancy(piece) {
 }
 
 function promotionBurst(piece) {
+  let hits = 0;
   for (const [dx, dy] of getDirectionalSteps("any", piece.side)) {
-    const x = piece.x + dx;
-    const y = piece.y + dy;
-    if (isInside(x, y) && pieceAt(x, y)?.side !== piece.side) performShot(piece, x, y, { finish: false });
+    for (let i = 1; i < BOARD_SIZE; i++) {
+      const x = piece.x + dx * i;
+      const y = piece.y + dy * i;
+      if (!isInside(x, y)) break;
+      const target = pieceAt(x, y);
+      if (!target) continue;
+      if (target.side === piece.side) break;
+      recordShot(piece.side, x, y);
+      state.contacts[piece.side].add(key(x, y));
+      const appliedDamage = damagePiece(target, 1, "Promotion Burst", piece);
+      const targetName = target.revealedTo.has(piece.side) ? attackerDescription(target) : `${playerName(target.side)} hidden ship`;
+      addLog(`${attackerDescription(piece)} hit ${targetName} at ${coord(x, y)} with Promotion Burst for ${appliedDamage} damage.`);
+      hits += 1;
+      break;
+    }
   }
-  addLog(`${attackerDescription(piece)} unleashed Promotion Burst in all directions.`);
+  addLog(`${attackerDescription(piece)} unleashed Promotion Burst in all directions and hit ${hits} target${hits === 1 ? "" : "s"}.`);
   clearActionModifiers(piece.side);
 }
 
 function resolveTargetSpecial(piece, x, y) {
   if (state.specialMode === "sacrificialMark") {
     const target = pieceAt(x, y);
-    if (!target || target.side === piece.side || distance(piece, target) > 2) return;
-    state.sacrificialMarks.push({ ownerId: piece.id, targetId: target.id, turns: 2 });
+    if (!target || target.side !== piece.side || target.id === piece.id || distance(piece, target) > 2) return;
+    state.sacrificialMarks.push({ ownerId: piece.id, targetId: target.id, side: piece.side, turns: 2 });
     addLog(`${attackerDescription(piece)} marked ${attackerDescription(target)} with Sacrificial Mark.`);
-    clearSpecialMode();
+    finishCardEffect(piece);
     if (state.reaction?.cardPlayed) {
       completeReactionWindow();
       return;
     }
-    render();
     return;
   }
   if (state.specialMode === "suppressiveFire") {
+    if (!squareInList(x, y, legalSquares(piece, "target"))) return;
     state.suppressiveZones.push({ side: enemyOf(piece.side), x, y, turns: 1 });
     addLog(`${playerName(piece.side)} suppressed the 3x3 zone centered on ${coord(x, y)}.`);
     finishCardEffect(piece);
     return;
   }
+  if (state.specialMode === "overwatchAmbush") {
+    if (!squareInList(x, y, legalSquares(piece, "target"))) return;
+    state.overwatch.push({ pieceId: piece.id, side: piece.side, x, y, turns: 2 });
+    addLog(`${attackerDescription(piece)} set Overwatch Ambush centered on ${coord(x, y)}.`);
+    finishCardEffect(piece);
+    return;
+  }
   if (state.specialMode === "flagshipBarrage") {
-    if (distance(piece, { x, y }) > 3 || pieceAt(x, y)?.side === piece.side) return;
+    if (!squareInList(x, y, legalSquares(piece, "target"))) return;
     const picks = state.specialData.picks;
     picks.push({ x, y });
     performShot(piece, x, y, { finish: false });
@@ -1288,14 +1379,10 @@ function resolveTargetSpecial(piece, x, y) {
   if (state.specialMode === "refractionShot") {
     const legal = legalSquares(piece, "target");
     if (!squareInList(x, y, legal)) return;
-    performShot(piece, x, y, { finish: false });
-    const dx = Math.sign(x - piece.x);
-    const dy = Math.sign(y - piece.y);
-    for (let i = 1; i <= 2; i++) {
-      const rx = x + dx * i;
-      const ry = y + dy * i;
-      if (isInside(rx, ry) && pieceAt(rx, ry)?.side !== piece.side) performShot(piece, rx, ry, { damage: 1, finish: false });
-    }
+    const hitTarget = pieceAt(x, y);
+    if (!hitTarget || hitTarget.side === piece.side) return;
+    const hit = performShot(piece, x, y, { finish: false });
+    if (hit) resolveRefractionRicochet(piece, x, y);
     addLog("Refraction Shot ricocheted behind the target.");
     clearActionModifiers(piece.side);
     finishCardEffect(piece);
@@ -1304,7 +1391,7 @@ function resolveTargetSpecial(piece, x, y) {
   if (state.specialMode === "flankFade") {
     const picks = state.specialData.picks;
     if (!picks.length) {
-      if (!squareInList(x, y, knightSquares(piece)) || pieceAt(x, y)?.side === piece.side) return;
+      if (!squareInList(x, y, knightSquares(piece)) || pieceAt(x, y)?.side !== enemyOf(piece.side)) return;
       performShot(piece, x, y, { finish: false });
       picks.push({ x, y });
       addLog("Flank-and-Fade: select an empty Knight-move destination.");
@@ -1356,6 +1443,7 @@ function radiusSquares(piece, radius, options = {}) {
       const occupant = pieceAt(x, y);
       if (options.emptyOnly && occupant) continue;
       if (options.enemyOnly && occupant?.side !== enemyOf(piece.side)) continue;
+      if (options.friendlyOnly && (occupant?.side !== piece.side || occupant.id === piece.id)) continue;
       squares.push({ x, y });
     }
   }
@@ -1375,7 +1463,11 @@ function raySquares(piece, [dx, dy], range, options = {}) {
     const y = piece.y + dy * i;
     if (!isInside(x, y)) break;
     const occupant = pieceAt(x, y);
-    if (options.emptyOnly && occupant) continue;
+    if (options.emptyOnly && occupant) {
+      if (options.passFriendly && occupant.side === piece.side) continue;
+      if (options.bypass) continue;
+      break;
+    }
     if (options.emptyOrEnemy && occupant?.side === piece.side) continue;
     squares.push({ x, y });
     if (options.emptyOrEnemy && occupant) break;
@@ -1395,16 +1487,83 @@ function diagonalSquares(piece, range, options = {}) {
   return getDirectionalSteps("diagonal", piece.side).flatMap((step) => raySquares(piece, step, range, options));
 }
 
+function movementSquaresWithBonus(piece, bonus) {
+  const original = state.moveBonus[piece.side];
+  state.moveBonus[piece.side] += bonus;
+  const squares = legalSquares(piece, "move");
+  state.moveBonus[piece.side] = original;
+  return squares;
+}
+
+function anyDirectionSquares(piece, range, options = {}) {
+  return getDirectionalSteps("any", piece.side).flatMap((step) => raySquares(piece, step, range, options));
+}
+
+function ghostWakeSquares(piece) {
+  const range = PIECES[piece.type].moveRange + state.moveBonus[piece.side] + (commandBuffFor(piece)?.move || 0);
+  return getDirectionalSteps("diagonal", piece.side).flatMap(([dx, dy]) => {
+    const squares = [];
+    for (let i = 1; i <= range; i++) {
+      const x = piece.x + dx * i;
+      const y = piece.y + dy * i;
+      if (!isInside(x, y)) break;
+      const occupant = pieceAt(x, y);
+      if (!occupant) {
+        squares.push({ x, y });
+        continue;
+      }
+      if (occupant.side !== piece.side) {
+        const beyond = { x: x + dx, y: y + dy };
+        if (isInside(beyond.x, beyond.y) && !pieceAt(beyond.x, beyond.y)) squares.push(beyond);
+      }
+      break;
+    }
+    return squares;
+  });
+}
+
 function revealAhead(piece, from, range) {
-  const dx = Math.sign(piece.x - from.x);
-  const dy = Math.sign(piece.y - from.y);
-  const step = dx || dy ? [dx, dy] : getForwardStep(piece.side);
-  for (const sq of raySquares(piece, step, range)) {
-    const target = pieceAt(sq.x, sq.y);
-    if (target && target.side !== piece.side) revealPiece(target, piece.side);
-    const mine = mineAt(sq.x, sq.y);
-    if (mine && mine.side !== piece.side) state.contacts[piece.side].add(key(sq.x, sq.y));
+  const forwardY = piece.side === "blue" ? 1 : -1;
+  const scanSteps = [[0, forwardY], [-1, forwardY], [1, forwardY]];
+  let found = 0;
+  for (const step of scanSteps) {
+    for (const sq of raySquares(piece, step, range)) {
+      const target = pieceAt(sq.x, sq.y);
+      const mine = mineAt(sq.x, sq.y);
+      if (target && target.side !== piece.side) {
+        revealPiece(target, piece.side);
+        state.contacts[piece.side].add(key(sq.x, sq.y));
+        found += 1;
+      } else if (mine && mine.side !== piece.side) {
+        state.contacts[piece.side].add(key(sq.x, sq.y));
+        found += 1;
+      }
+    }
   }
+  addLog(`${attackerDescription(piece)} completed Forward Probe and detected ${found} contact${found === 1 ? "" : "s"} ahead.`);
+}
+
+function resolveRefractionRicochet(piece, hitX, hitY) {
+  const candidates = [];
+  for (const [dx, dy] of getDirectionalSteps("diagonal", piece.side)) {
+    for (let i = 1; i <= 2; i++) {
+      const x = hitX + dx * i;
+      const y = hitY + dy * i;
+      if (!isInside(x, y)) break;
+      const target = pieceAt(x, y);
+      if (target?.side === enemyOf(piece.side)) candidates.push({ target, x, y, distance: i });
+    }
+  }
+  candidates.sort((a, b) => a.distance - b.distance);
+  const ricochet = candidates[0];
+  if (!ricochet) {
+    addLog("Refraction Shot found no ricochet target.");
+    return;
+  }
+  recordShot(piece.side, ricochet.x, ricochet.y);
+  state.contacts[piece.side].add(key(ricochet.x, ricochet.y));
+  damagePiece(ricochet.target, 1, "Refraction Shot", piece);
+  addLog(`Refraction Shot ricocheted into an enemy ship at ${coord(ricochet.x, ricochet.y)} for 1 damage.`);
 }
 
 function reconSquare(piece, x, y) {
@@ -1416,6 +1575,7 @@ function reconSquare(piece, x, y) {
     state.contacts[piece.side].add(key(x, y));
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: occupied by an enemy contact.`);
   } else if (mine && mine.side !== piece.side) {
+    state.contacts[piece.side].add(key(x, y));
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: mine detected.`);
   } else {
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: clear water.`);
@@ -1548,6 +1708,18 @@ function finishAction() {
     render();
     return;
   }
+  state.actionTaken = true;
+  state.actionMode = null;
+  addLog("Targeting action complete. Play any Targeting Phase cards, then end the turn.");
+  render();
+}
+
+function endTurn(force = false) {
+  if (state.reaction) return;
+  if (state.phase === "setup") return lockSetup();
+  if (state.phase === "currentSetup") return;
+  if (!force && (state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) return beginTargetingPhase();
+  if (!force && state.phase === "action" && state.turn > 2 && !state.actionTaken) return;
   if (startReactionWindow("turnEnd", "before the turn ends")) {
     render();
     return;
@@ -1555,16 +1727,17 @@ function finishAction() {
   completeEndTurn();
 }
 
-function endTurn(force = false) {
-  if (state.reaction) return;
-  if (state.phase === "setup") return lockSetup();
-  if (state.phase === "currentSetup") return;
-  if (!force && state.phase === "action" && state.turn > 2) return;
-  if (startReactionWindow("turnEnd", "before the turn ends")) {
+function beginTargetingPhase() {
+  if (state.gameOver || !state.movedPieceId) return;
+  if (startReactionWindow("actionPhase", "before the Targeting Phase")) {
     render();
     return;
   }
-  completeEndTurn();
+  state.phase = "action";
+  state.selectedId = state.movedPieceId;
+  state.actionMode = null;
+  addLog("Targeting Phase begins. Fire, recon, deploy a mine, use an ability, or play Targeting Phase cards.");
+  render();
 }
 
 function completeEndTurn() {
@@ -1577,6 +1750,7 @@ function completeEndTurn() {
   state.phase = "move";
   state.selectedId = null;
   state.movedPieceId = null;
+  state.actionTaken = false;
   state.lastMove = null;
   state.pendingCurrentShifts = [];
   state.currentAffectedPieceId = null;
@@ -1587,7 +1761,14 @@ function completeEndTurn() {
   state.commandBonus = null;
   state.defensive[state.active] = false;
   state.armor[state.active] = false;
+  state.lastStandLocks[state.active] = false;
+  state.lastSuccessfulHit = null;
   tickCardStatuses(state.active);
+  if (state.nextMoveBonus[state.active] > 0) {
+    state.moveBonus[state.active] += state.nextMoveBonus[state.active];
+    addLog(`${playerName(state.active)} gains +${state.nextMoveBonus[state.active]} movement from a prior Forward Probe.`);
+    state.nextMoveBonus[state.active] = 0;
+  }
   addLog(`${playerName(state.active)} begins turn ${state.turn}.`);
   render();
 }
@@ -1596,13 +1777,28 @@ function tickCardStatuses(side) {
   for (const piece of state.pieces.filter((candidate) => candidate.side === side)) {
     state.immobile.delete(piece.id);
   }
+  state.hullLockdowns = tickTimedStatus(state.hullLockdowns, side, (status) => state.invulnerable.delete(status.pieceId));
+  state.bulwarks = tickTimedStatus(state.bulwarks, side, (status) => state.invulnerable.delete(status.pieceId));
+  state.timedShields = tickTimedStatus(state.timedShields, side, (status) => state.shielded.delete(status.pieceId));
   state.suppressiveZones = state.suppressiveZones
     .map((zone) => (zone.side === side ? { ...zone, turns: zone.turns - 1 } : zone))
     .filter((zone) => zone.turns > 0);
   state.overwatch = state.overwatch
     .map((trap) => (trap.side === side ? { ...trap, turns: trap.turns - 1 } : trap))
     .filter((trap) => trap.turns > 0);
-  state.sacrificialMarks = state.sacrificialMarks.map((mark) => ({ ...mark, turns: mark.turns - 1 })).filter((mark) => mark.turns > 0);
+  state.sacrificialMarks = state.sacrificialMarks
+    .map((mark) => (mark.side === side ? { ...mark, turns: mark.turns - 1 } : mark))
+    .filter((mark) => mark.turns > 0);
+}
+
+function tickTimedStatus(statuses, side, expire) {
+  return statuses
+    .map((status) => (status.side === side ? { ...status, turns: status.turns - 1 } : status))
+    .filter((status) => {
+      if (status.turns > 0) return true;
+      expire(status);
+      return false;
+    });
 }
 
 function resolvePendingCurrentShift() {
@@ -1727,10 +1923,21 @@ function playCard(instanceId) {
 }
 
 function canPlayCard(card, piece, actorSide = state.active) {
+  if (state.lastStandLocks[actorSide]) return false;
+  if (card.type === "overcharge") {
+    return (
+      state.phase === "action" &&
+      !!movedPiece() &&
+      state.lastSuccessfulHit?.side === actorSide &&
+      state.lastSuccessfulHit?.pieceId === movedPiece()?.id
+    );
+  }
+  if (card.type === "lastStand") return !!piece && piece.side === actorSide && piece.type !== "pawn";
   if (state.reaction) return card.phase === "Instant" && !!piece && piece.side === actorSide;
   if (card.phase === "Instant") return !!piece && piece.side === actorSide;
   if (card.phase === "Movement Phase" && state.phase !== "move" && state.phase !== "commandMove") return false;
   if (card.phase === "Targeting Phase" && state.phase !== "action") return false;
+  if (card.type === "promotionBurst") return !!piece && piece.side === actorSide && isOnOpponentBackline(piece);
   if (["hullLockdown", "ironBulwark"].includes(card.type)) return !!piece && piece.side === actorSide;
   if (card.type === "moveBoost") return state.phase === "move" || state.phase === "commandMove";
   if (
@@ -1745,7 +1952,6 @@ function canPlayCard(card, piece, actorSide = state.active) {
       "broadside",
       "lineBreaker",
       "promotionBurst",
-      "overcharge",
       "flagshipBarrage",
       "refractionShot",
       "flankFade",
@@ -1757,9 +1963,13 @@ function canPlayCard(card, piece, actorSide = state.active) {
     return state.phase === "action" && !!movedPiece();
   }
   if (card.type === "repair") return !!piece && piece.side === actorSide && piece.type !== "pawn" && piece.hp < piece.maxHp;
-  if (["wideRecon", "sensorSweep", "feint", "forwardProbe", "blockadeDrift", "ironAdvance", "ghostWake", "surfacingStrike", "powerPush"].includes(card.type)) return !!piece && piece.side === actorSide;
+  if (["wideRecon", "sensorSweep", "feint", "forwardProbe", "blockadeDrift", "ironAdvance", "ghostWake", "surfacingStrike", "powerPush", "callGuard"].includes(card.type)) return !!piece && piece.side === actorSide;
   if (["evasiveRoll", "royalCommand", "sacrificialMark", "counterBattery", "overwatchAmbush"].includes(card.type)) return !!piece && piece.side === actorSide;
   return true;
+}
+
+function isOnOpponentBackline(piece) {
+  return (piece.side === "blue" && piece.y === BOARD_SIZE - 1) || (piece.side === "red" && piece.y === 0);
 }
 
 function applyCard(card, piece, actorSide = state.active) {
@@ -1769,6 +1979,7 @@ function applyCard(card, piece, actorSide = state.active) {
       "lineBreaker",
       "evasiveRoll",
       "royalCommand",
+      "callGuard",
       "forwardProbe",
       "blockadeDrift",
       "ironAdvance",
@@ -1781,6 +1992,7 @@ function applyCard(card, piece, actorSide = state.active) {
       "flagshipBarrage",
       "suppressiveFire",
       "vectorShift",
+      "overwatchAmbush",
       "sacrificialMark",
     ].includes(card.type) ||
     (card.type === "overcharge" && state.phase === "action" && movedPiece())
@@ -1791,24 +2003,23 @@ function applyCard(card, piece, actorSide = state.active) {
     return;
   }
   if (card.type === "attackBoost") state.attackBonus[actorSide] += card.amount;
-  if (card.type === "overcharge") state.attackBonus[actorSide] += 1;
   if (card.type === "rangeBoost") state.rangeBonus[actorSide] += card.amount;
   if (card.type === "moveBoost") state.moveBonus[actorSide] += card.amount;
   if (card.type === "defense") state.defensive[actorSide] = true;
   if (card.type === "armor") state.armor[actorSide] = true;
   if (card.type === "hullLockdown" && piece) {
     state.invulnerable.add(piece.id);
-    state.immobile.add(piece.id);
+    state.hullLockdowns.push({ pieceId: piece.id, side: piece.side, turns: 1 });
     addLog(`${attackerDescription(piece)} entered Hull Lockdown.`);
     return;
   }
   if (card.type === "ironBulwark" && piece) {
     state.invulnerable.add(piece.id);
+    state.bulwarks.push({ pieceId: piece.id, side: piece.side, turns: 2 });
     addLog(`${attackerDescription(piece)} activated Iron Bulwark.`);
     return;
   }
   if (card.type === "counterBattery" && piece) state.counterBattery.add(piece.id);
-  if (card.type === "overwatchAmbush" && piece) state.overwatch.push({ pieceId: piece.id, side: piece.side, turns: 2 });
   if (card.type === "repair" && piece) piece.hp = Math.min(piece.maxHp, piece.hp + 1);
   if (card.type === "wideRecon" || card.type === "forwardProbe") {
     state.actionMode = "recon";
@@ -1816,8 +2027,9 @@ function applyCard(card, piece, actorSide = state.active) {
   }
   if (card.type === "feint" && piece) revealKnightReachableOccupancy(piece);
   if (card.type === "defensiveMuster" && piece) {
-    for (const ally of state.pieces.filter((candidate) => candidate.side === piece.side && distance(candidate, piece) <= 1)) {
+    for (const ally of state.pieces.filter((candidate) => candidate.side === piece.side && candidate.id !== piece.id && distance(candidate, piece) <= 1)) {
       state.shielded.add(ally.id);
+      state.timedShields.push({ pieceId: ally.id, side: piece.side, turns: 1 });
     }
     addLog(`${attackerDescription(piece)} shielded adjacent allies with Defensive Muster.`);
     return;
@@ -1828,42 +2040,20 @@ function applyCard(card, piece, actorSide = state.active) {
   }
   if (card.type === "forwardProbe") state.moveBonus[actorSide] += 1;
   if (card.type === "sensorSweep" && piece) revealDiagonalContacts(piece);
-  if (card.type === "coordinatedVolley" && piece) state.attackBonus[actorSide] += nearbyFriendlyCount(piece, 2, 2);
-  if (card.type === "overlappingFields" && piece) state.attackBonus[actorSide] += alignedFriendlyCount(piece);
-  if (card.type === "vectorShift") {
-    state.rangeBonus[actorSide] += 8;
-    state.attackBonus[actorSide] += Math.random() >= 0.5 ? 1 : 0;
+  if (card.type === "coordinatedVolley" && piece) {
+    const bonus = nearbyFriendlyCount(piece, 2, 2);
+    state.attackBonus[actorSide] += bonus;
+    addLog(`Coordinated Volley added +${bonus} damage from nearby friendly support.`);
   }
-  if (card.type === "surfacingStrike") {
-    state.torpedo[actorSide] = true;
-    state.attackBonus[actorSide] += 1;
-  }
-  if (card.type === "chainAssault") {
-    state.torpedo[actorSide] = true;
-    state.attackBonus[actorSide] += 1;
-  }
-  if (card.type === "broadside") {
-    state.rangeBonus[actorSide] += 1;
-    state.attackBonus[actorSide] += 1;
-  }
-  if (card.type === "powerPush") {
-    state.moveBonus[actorSide] += 3;
-    state.attackBonus[actorSide] += 2;
-  }
-  if (card.type === "flagshipBarrage") {
-    state.specialMode = "flagshipBarrage";
-    state.specialData = { cardName: card.name, cardPhase: card.phase, pieceId: piece?.id, picks: [] };
-    state.attackBonus[actorSide] += selectedPiece()?.type === "king" || movedPiece()?.type === "king" ? 1 : 0;
-    return;
+  if (card.type === "overlappingFields" && piece) {
+    const bonus = alignedFriendlyCount(piece);
+    state.attackBonus[actorSide] += bonus;
+    addLog(`Overlapping Fields added +${bonus} damage from aligned friendly support.`);
   }
   if (card.type === "lastStand") {
-    state.defensive[actorSide] = true;
     if (piece) state.lastStand.add(piece.id);
-    drawCards(actorSide, 1);
-  }
-  if (card.type === "royalCommand") {
-    state.specialMode = "royalCommand";
-    state.specialData = { cardName: card.name, cardPhase: card.phase, pieceId: piece?.id, picks: [] };
+    state.lastStandLocks[actorSide] = true;
+    addLog(`${attackerDescription(piece)} prepared Last Stand. No more special cards may be played by ${playerName(actorSide)} this turn.`);
   }
   if (card.type === "torpedo") state.torpedo[actorSide] = true;
   if (card.type === "draw") drawCards(actorSide, card.amount);
@@ -1897,22 +2087,24 @@ function revealDiagonalContacts(piece) {
     while (isInside(x, y)) {
       const target = pieceAt(x, y);
       if (target && target.side !== piece.side) {
-        revealPiece(target, piece.side);
+        state.contacts[piece.side].add(key(x, y));
         detected += 1;
       }
       const mine = mineAt(x, y);
-      if (mine && mine.side !== piece.side) state.contacts[piece.side].add(key(x, y));
+      if (mine && mine.side !== piece.side) {
+        state.contacts[piece.side].add(key(x, y));
+        detected += 1;
+      }
       x += dx;
       y += dy;
     }
   }
-  if (detected >= 3) state.moveBonus[piece.side] += 1;
-  addLog(`${attackerDescription(piece)} completed Sensor Sweep and detected ${detected} enemy unit${detected === 1 ? "" : "s"}.`);
+  if (detected >= 3) state.nextMoveBonus[piece.side] += 1;
+  addLog(`${attackerDescription(piece)} completed Sensor Sweep and detected ${detected} occupied diagonal square${detected === 1 ? "" : "s"}.`);
 }
 
-function damagePiece(piece, amount, source) {
+function damagePiece(piece, amount, source, sourcePiece = null) {
   if (amount > 0 && state.invulnerable.has(piece.id)) {
-    state.invulnerable.delete(piece.id);
     addLog(`${attackerDescription(piece)} ignored damage from ${source}.`);
     return 0;
   }
@@ -1925,33 +2117,53 @@ function damagePiece(piece, amount, source) {
     clearEmptyCommandBuff(piece.id);
   }
   if (amount <= 0) return 0;
-  if (amount > 0 && state.lastStand.has(piece.id) && piece.hp - amount <= 0) {
+  if (amount > 0 && state.lastStand.has(piece.id) && piece.hp - amount <= 1) {
     piece.hp = 1;
     state.lastStand.delete(piece.id);
-    addLog(`${attackerDescription(piece)} triggered Last Stand and remains at 1 HP.`);
+    beginLastStandTurn(piece);
     return 0;
   }
   piece.hp -= amount;
   if (piece.hp <= 0) {
     state.sunkShips.push({ id: piece.id, side: piece.side, type: piece.type });
     delete state.commandBuffs[piece.id];
+    state.hullLockdowns = state.hullLockdowns.filter((status) => status.pieceId !== piece.id);
+    state.bulwarks = state.bulwarks.filter((status) => status.pieceId !== piece.id);
+    state.timedShields = state.timedShields.filter((status) => status.pieceId !== piece.id);
+    state.invulnerable.delete(piece.id);
+    state.shielded.delete(piece.id);
     state.pieces = state.pieces.filter((p) => p.id !== piece.id);
     const destroyedName = source === "attack" ? `${playerName(piece.side)} ship` : attackerDescription(piece);
     addLog(`${destroyedName} was destroyed by ${source}.`);
-    resolveSacrificialMarks(piece);
+    resolveSacrificialMarks(piece, sourcePiece);
     checkWinCondition(piece.side);
   }
   return amount;
 }
 
-function resolveSacrificialMarks(destroyedPiece) {
-  const marks = state.sacrificialMarks.filter((mark) => mark.ownerId === destroyedPiece.id);
-  state.sacrificialMarks = state.sacrificialMarks.filter((mark) => mark.ownerId !== destroyedPiece.id && mark.targetId !== destroyedPiece.id);
+function beginLastStandTurn(piece) {
+  state.active = piece.side;
+  state.phase = "move";
+  state.selectedId = piece.id;
+  state.movedPieceId = null;
+  state.actionTaken = false;
+  state.lastMove = null;
+  state.actionMode = null;
+  state.commandMode = null;
+  state.commandedPieceId = null;
+  state.commandBonus = null;
+  state.lastStandLocks[piece.side] = true;
+  clearSpecialMode();
+  addLog(`${attackerDescription(piece)} triggered Last Stand at 1 HP and begins a bonus turn. Special Action Cards are locked for this turn.`);
+}
+
+function resolveSacrificialMarks(destroyedPiece, sourcePiece = null) {
+  const marks = state.sacrificialMarks.filter((mark) => mark.targetId === destroyedPiece.id);
+  state.sacrificialMarks = state.sacrificialMarks.filter((mark) => mark.targetId !== destroyedPiece.id && mark.ownerId !== destroyedPiece.id);
   for (const mark of marks) {
-    const target = state.pieces.find((piece) => piece.id === mark.targetId);
-    if (target) {
-      damagePiece(target, 2, "Sacrificial Mark");
-      addLog("Sacrificial Mark dealt 2 damage.");
+    if (sourcePiece && sourcePiece.side !== destroyedPiece.side && state.pieces.some((piece) => piece.id === sourcePiece.id)) {
+      damagePiece(sourcePiece, 2, "Sacrificial Mark");
+      addLog("Sacrificial Mark dealt 2 damage to the attacking ship.");
     }
   }
 }
@@ -1960,7 +2172,7 @@ function resolveOverwatch(piece) {
   for (const trap of [...state.overwatch]) {
     const owner = state.pieces.find((candidate) => candidate.id === trap.pieceId);
     if (!owner || owner.side === piece.side) continue;
-    if (distance(owner, piece) <= 1) {
+    if (Math.abs(piece.x - trap.x) <= 1 && Math.abs(piece.y - trap.y) <= 1) {
       damagePiece(piece, 1, "Overwatch Ambush");
       state.overwatch = state.overwatch.filter((candidate) => candidate !== trap);
       addLog(`${attackerDescription(owner)} triggered Overwatch Ambush.`);
@@ -2063,7 +2275,10 @@ function statusText() {
     return `${playerName(state.setupSide)} places a 3x3 Shifting Currents zone inside the first 6 rows closest to that fleet.`;
   }
   if (state.phase === "commandMove") return `Turn ${state.turn}. Move the ordered ship, then take its action.`;
-  return `Turn ${state.turn}. ${state.phase === "move" ? "Move one ship or issue a King command." : "Fire, recon, deploy mine, play a card, or pass with an ability."}`;
+  if (state.phase === "move" && state.movedPieceId) return `Turn ${state.turn}. Movement complete. Play Movement Phase cards or begin Targeting.`;
+  if (state.phase === "move") return `Turn ${state.turn}. Move one ship, issue a King command, or play a Movement Phase card.`;
+  if (state.phase === "action" && state.actionTaken) return `Turn ${state.turn}. Targeting action complete. Play Targeting Phase cards or end the turn.`;
+  return `Turn ${state.turn}. Fire, recon, deploy mine, use an ability, or play a Targeting Phase card.`;
 }
 
 function renderBoard() {
@@ -2072,10 +2287,10 @@ function renderBoard() {
   const canPreviewSetup = !isMultiplayer || state.setupSide === viewer;
   const selected = selectedPiece();
   const moved = movedPiece();
-  const activeTargets = canPreviewRanges && (state.phase === "move" || state.phase === "commandMove") && selected?.side === viewer ? legalSquares(selected, "move") : [];
+  const activeTargets = canPreviewRanges && !state.movedPieceId && (state.phase === "move" || state.phase === "commandMove") && selected?.side === viewer ? legalSquares(selected, "move") : [];
   const actionTargets =
-    canPreviewRanges && state.phase === "action" && moved?.side === viewer && state.actionMode !== "mine" ? legalSquares(moved, "target") : [];
-  const mineTargets = canPreviewRanges && state.phase === "action" && moved?.side === viewer && state.actionMode === "mine" ? legalMineSquares() : [];
+    canPreviewRanges && !state.actionTaken && state.phase === "action" && moved?.side === viewer && state.actionMode !== "mine" ? legalSquares(moved, "target") : [];
+  const mineTargets = canPreviewRanges && !state.actionTaken && state.phase === "action" && moved?.side === viewer && state.actionMode === "mine" ? legalMineSquares() : [];
   const specialSquares = canPreviewRanges ? specialTargets() : [];
   const commandSquares = canPreviewRanges ? commandTargets() : [];
   const selectedKey = canPreviewRanges && (state.phase !== "setup" || canPreviewSetup) && selected?.side === viewer ? key(selected.x, selected.y) : "";
@@ -2092,7 +2307,7 @@ function renderBoard() {
       if (lastKeys.includes(key(x, y))) cell.classList.add("last-move");
       if (squareInList(x, y, activeTargets)) cell.classList.add("move");
       if (squareInList(x, y, mineTargets)) cell.classList.add("move");
-      if (squareInList(x, y, specialSquares)) cell.classList.add(["evasiveRoll", "royalCommand"].includes(state.specialMode) ? "move" : "target");
+      if (squareInList(x, y, specialSquares)) cell.classList.add(["evasiveRoll", "royalCommand", "callGuard"].includes(state.specialMode) ? "move" : "target");
       if (squareInList(x, y, actionTargets)) cell.classList.add(state.actionMode === "recon" ? "recon" : "target");
       if (squareInList(x, y, commandSquares)) cell.classList.add("command");
       const visibleCurrent = visibleCurrentAt(x, y);
@@ -2105,7 +2320,7 @@ function renderBoard() {
       if (shotVisible) cell.classList.add("shot");
 
       const mine = mineAt(x, y);
-      if (mine?.side === viewer) cell.classList.add("mine");
+      if (mine && (mine.side === viewer || state.contacts[viewer].has(key(x, y)))) cell.classList.add("mine");
 
       const piece = pieceAt(x, y);
       if (piece) {
@@ -2151,7 +2366,11 @@ function renderSelected() {
   }
   if (!piece) {
     selectedShipEl.className = "ship-card muted";
-    selectedShipEl.textContent = state.phase === "setup" ? "Select a ship to reposition during deployment." : state.phase === "move" ? "Select one of your ships." : "Choose an action for the moved ship.";
+    selectedShipEl.textContent = state.phase === "setup"
+      ? "Select a ship to reposition during deployment."
+      : state.phase === "move"
+        ? "Select one of your ships."
+        : "Choose an action for the moved ship.";
     return;
   }
   const def = PIECES[piece.type];
@@ -2161,6 +2380,8 @@ function renderSelected() {
     <div>${playerName(piece.side)} at ${coord(piece.x, piece.y)}</div>
     <div>HP ${piece.hp}/${piece.maxHp}</div>
     <div class="muted">Move: ${def.movement}, range ${def.moveRange}. Target: ${def.targeting}, range ${def.targetRange}.</div>
+    ${state.phase === "move" && state.movedPieceId === piece.id ? `<div class="muted">Movement complete. Use Begin Targeting when ready.</div>` : ""}
+    ${state.phase === "action" && state.actionTaken ? `<div class="muted">Targeting complete. Use End Turn when ready.</div>` : ""}
   `;
 }
 
@@ -2282,13 +2503,17 @@ function visibleLogEntry(entry) {
 }
 
 function updateButtons() {
-  const canAct = state.phase === "action" && !!movedPiece() && !state.gameOver;
+  const canAct = state.phase === "action" && !!movedPiece() && !state.actionTaken && !state.gameOver;
   const canUseTurn = canUseActiveTurn();
   const reactionOpen = Boolean(state.reaction);
   const pieceMovedThisTurn = !!state.movedPieceId || state.phase === "action" || state.phase === "commandMove";
   const kingSelected = selectedPiece()?.type === "king" && selectedPiece()?.side === state.active && state.phase === "move" && !pieceMovedThisTurn;
-  const passLocked = state.phase === "action" && state.turn > 2;
+  const phaseButtonLocked = state.phase === "action" && state.turn > 2 && !state.actionTaken;
   const passAbilityLocked = state.passAbilityCooldown[state.active] > 0;
+  if (state.phase === "setup") endTurnButton.textContent = "Lock Setup";
+  else if ((state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) endTurnButton.textContent = "Begin Targeting";
+  else if (state.phase === "action") endTurnButton.textContent = state.actionTaken ? "End Turn" : "Pass Targeting";
+  else endTurnButton.textContent = "End Turn";
   newGameButton.disabled = isMultiplayer && (multiplayerSeat.color !== "blue" || !state.gameOver);
   gameModeSelect.disabled = isMultiplayer && (multiplayerSeat.color !== "blue" || (!state.gameOver && (state.gameModeConfirmed || state.phase !== "setup")));
   confirmModeButton.hidden = !isMultiplayer || multiplayerSeat.color !== "red" || state.gameModeConfirmed || state.gameOver;
@@ -2297,7 +2522,7 @@ function updateButtons() {
   randomizeSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   resupplyButton.disabled = !canUseTurn || state.phase !== "move" || pieceMovedThisTurn || state.turn < 3 || state.gameOver;
   surrenderButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup";
-  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "currentSetup" || passLocked;
+  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "currentSetup" || phaseButtonLocked;
   reconButton.disabled = reactionOpen || !canUseTurn || !canAct;
   mineButton.disabled = reactionOpen || !canUseTurn || !canAct;
   repairButton.disabled = reactionOpen || !canUseTurn || !canAct || passAbilityLocked || movedPiece()?.type === "pawn" || movedPiece()?.hp >= movedPiece()?.maxHp;
@@ -2335,6 +2560,7 @@ function serializeGameState() {
     pieces: state.pieces.map((piece) => ({ ...piece, revealedTo: serializeSet(piece.revealedTo) })),
     selectedId: state.selectedId,
     movedPieceId: state.movedPieceId,
+    actionTaken: state.actionTaken,
     lastMove: state.lastMove,
     actionMode: state.actionMode,
     commandMode: state.commandMode,
@@ -2345,6 +2571,7 @@ function serializeGameState() {
     commandBonus: state.commandBonus,
     commandBuffs: state.commandBuffs,
     moveBonus: state.moveBonus,
+    nextMoveBonus: state.nextMoveBonus,
     attackBonus: state.attackBonus,
     rangeBonus: state.rangeBonus,
     torpedo: state.torpedo,
@@ -2364,10 +2591,15 @@ function serializeGameState() {
     counterBattery: serializeSet(state.counterBattery),
     overwatch: state.overwatch,
     shielded: serializeSet(state.shielded),
+    timedShields: state.timedShields,
     invulnerable: serializeSet(state.invulnerable),
+    hullLockdowns: state.hullLockdowns,
+    bulwarks: state.bulwarks,
     immobile: serializeSet(state.immobile),
     suppressiveZones: state.suppressiveZones,
     lastStand: serializeSet(state.lastStand),
+    lastStandLocks: state.lastStandLocks,
+    lastSuccessfulHit: state.lastSuccessfulHit,
     sunkShips: state.sunkShips,
     gameMode: state.gameMode,
     gameModeConfirmed: state.gameModeConfirmed,
@@ -2394,7 +2626,10 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
     currents: (sharedState.currents || []).map((current) => ({ ...current, revealedTo: hydrateSet(current.revealedTo) })),
     counterBattery: hydrateSet(sharedState.counterBattery),
     shielded: hydrateSet(sharedState.shielded),
+    timedShields: Array.isArray(sharedState.timedShields) ? sharedState.timedShields : [],
     invulnerable: hydrateSet(sharedState.invulnerable),
+    hullLockdowns: Array.isArray(sharedState.hullLockdowns) ? sharedState.hullLockdowns : [],
+    bulwarks: Array.isArray(sharedState.bulwarks) ? sharedState.bulwarks : [],
     immobile: hydrateSet(sharedState.immobile),
     lastStand: hydrateSet(sharedState.lastStand),
     commandBuffs: sharedState.commandBuffs || {},
@@ -2403,6 +2638,10 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
   state.gameMode = state.gameMode || "classic";
   state.gameModeConfirmed = Boolean(sharedState.gameModeConfirmed);
   state.reaction = sharedState.reaction || null;
+  state.actionTaken = Boolean(sharedState.actionTaken);
+  state.nextMoveBonus = sharedState.nextMoveBonus || { blue: 0, red: 0 };
+  state.lastStandLocks = sharedState.lastStandLocks || { blue: false, red: false };
+  state.lastSuccessfulHit = sharedState.lastSuccessfulHit || null;
   if (gameModeSelect.value !== state.gameMode) gameModeSelect.value = state.gameMode;
   multiplayerSync.version = version;
   multiplayerSync.ready = true;
