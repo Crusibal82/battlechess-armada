@@ -14,6 +14,13 @@ const MAX_CHAT_MESSAGES = 80;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 8;
 const AUTH_TOKEN_SECRET = process.env.BATTLECHESS_AUTH_SECRET || "battlechess-armada-dev-secret";
+const ADMIN_USERS = new Set(
+  String(process.env.BATTLECHESS_ADMIN_USERS || "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean),
+);
+const BUG_REPORTS_FILE = path.join(DATA_DIR, "bug-reports.jsonl");
 const loginAttempts = new Map();
 
 const lobbies = Array.from({ length: MAX_LOBBIES }, (_, index) => ({
@@ -94,7 +101,11 @@ function clearLoginFailures(req, username) {
 }
 
 function publicUser(user) {
-  return { id: user.id, username: user.username };
+  return { id: user.id, username: user.username, isAdmin: isAdminUser(user) };
+}
+
+function isAdminUser(userOrSession) {
+  return ADMIN_USERS.has(String(userOrSession?.username || "").toLowerCase());
 }
 
 function base64Url(input) {
@@ -161,6 +172,16 @@ function requireAuth(req, res) {
   return auth;
 }
 
+function requireAdmin(req, res) {
+  const auth = requireAuth(req, res);
+  if (!auth) return null;
+  if (!isAdminUser(auth.user)) {
+    sendJson(res, 403, { error: "Admin access required." });
+    return null;
+  }
+  return auth;
+}
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -179,6 +200,24 @@ function readJson(req) {
   });
 }
 
+function appendBugReport(report) {
+  fs.appendFileSync(BUG_REPORTS_FILE, `${JSON.stringify(report)}\n`, "utf8");
+}
+
+function readBugReports() {
+  try {
+    return fs
+      .readFileSync(BUG_REPORTS_FILE, "utf8")
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .slice(-200)
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
 function publicLobby(lobby) {
   return {
     id: lobby.id,
@@ -188,7 +227,21 @@ function publicLobby(lobby) {
       red: lobby.players.red ? { name: lobby.players.red.name } : null,
     },
     openSeats: COLORS.filter((color) => !lobby.players[color]),
+    activeGame: Boolean(lobby.gameState && !lobby.gameState.gameOver),
     updatedAt: lobby.updatedAt,
+  };
+}
+
+function adminLobby(lobby) {
+  return {
+    ...publicLobby(lobby),
+    gameVersion: lobby.gameVersion,
+    gameUpdatedBy: lobby.gameUpdatedBy,
+    phase: lobby.gameState?.phase || null,
+    active: lobby.gameState?.active || null,
+    turn: lobby.gameState?.turn || null,
+    gameOver: Boolean(lobby.gameState?.gameOver),
+    winner: lobby.gameState?.winner || null,
   };
 }
 
@@ -292,6 +345,51 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { lobbies: lobbies.map(publicLobby) });
   }
 
+  if (req.method === "GET" && url.pathname === "/api/admin/lobbies") {
+    const auth = requireAdmin(req, res);
+    if (!auth) return;
+    return sendJson(res, 200, { lobbies: lobbies.map(adminLobby) });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/bug-reports") {
+    const auth = requireAdmin(req, res);
+    if (!auth) return;
+    return sendJson(res, 200, { reports: readBugReports() });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/bug-reports") {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+    const lobbyId = String(payload.lobbyId || "").trim();
+    const lobby = lobbyId ? findLobby(lobbyId) : null;
+    const title = String(payload.title || "").trim().slice(0, 120);
+    const details = String(payload.details || "").trim().slice(0, 3000);
+    if (!lobby) return sendJson(res, 400, { error: "A valid lobby is required." });
+    if (!details) return sendJson(res, 400, { error: "Bug details are required." });
+    const report = {
+      id: crypto.randomBytes(8).toString("hex"),
+      lobbyId: lobby.id,
+      lobbyName: lobby.name,
+      title: title || "Bug report",
+      details,
+      reporter: auth.user.username,
+      reporterId: auth.user.id,
+      createdAt: Date.now(),
+      gameVersion: lobby.gameVersion,
+      phase: lobby.gameState?.phase || null,
+      active: lobby.gameState?.active || null,
+      turn: lobby.gameState?.turn || null,
+    };
+    appendBugReport(report);
+    return sendJson(res, 201, { report });
+  }
+
   const joinMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/join$/);
   if (req.method === "POST" && joinMatch) {
     const auth = requireAuth(req, res);
@@ -335,7 +433,7 @@ async function handleApi(req, res, url) {
     const lobby = findLobby(stateMatch[1]);
     if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
     if (!lobby.players.blue && !lobby.players.red) return sendJson(res, 404, { error: "Lobby is empty." });
-    if (auth.session.lobbyId !== lobby.id) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+    if (auth.session.lobbyId !== lobby.id && !isAdminUser(auth.user)) return sendJson(res, 403, { error: "You are not seated in this lobby." });
     return sendJson(res, 200, { state: lobby.gameState, version: lobby.gameVersion, updatedBy: lobby.gameUpdatedBy });
   }
 

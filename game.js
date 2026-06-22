@@ -259,6 +259,7 @@ const multiplayerSeat = {
   token: storedAuthToken(),
 };
 const isMultiplayer = Boolean(multiplayerSeat.lobbyId && multiplayerSeat.color && multiplayerSeat.token);
+const isSpectator = isMultiplayer && multiplayerSeat.color === "spectator";
 const multiplayerSync = {
   version: 0,
   ready: !isMultiplayer,
@@ -1700,6 +1701,7 @@ function visibleCurrentAt(x, y) {
 
 function viewSide() {
   if (!isMultiplayer && state.reaction) return state.reaction.side;
+  if (isSpectator) return state.active;
   return isMultiplayer ? multiplayerSeat.color : state.active;
 }
 
@@ -2540,6 +2542,7 @@ function updateButtons() {
 
 function canUseActiveTurn() {
   if (state.reaction) return canUseReactionWindow();
+  if (isSpectator) return false;
   return !isMultiplayer || state.active === multiplayerSeat.color || (state.phase === "setup" && state.setupSide === multiplayerSeat.color) || (state.phase === "currentSetup" && state.setupSide === multiplayerSeat.color);
 }
 
@@ -2666,7 +2669,7 @@ async function fetchSharedGameState() {
 }
 
 async function publishSharedGameState() {
-  if (!isMultiplayer || multiplayerSync.applying) return;
+  if (!isMultiplayer || isSpectator || multiplayerSync.applying) return;
   if (multiplayerSync.publishing) {
     multiplayerSync.publishQueued = true;
     return;
@@ -2722,6 +2725,7 @@ function startMultiplayerSync() {
   if (!isMultiplayer) return;
   pollSharedGameState();
   multiplayerSync.pollTimer = window.setInterval(pollSharedGameState, 1500);
+  if (isSpectator) return;
   chatPanel.hidden = false;
   pollLobbyChat();
   multiplayerSync.chatTimer = window.setInterval(pollLobbyChat, 2500);
@@ -2785,6 +2789,10 @@ async function sendLobbyChat(event) {
 
 async function leaveLobbyFromGame() {
   if (!isMultiplayer) return;
+  if (isSpectator) {
+    window.location.href = "/multiplayer.html";
+    return;
+  }
   await fetch(`/api/lobbies/${encodeURIComponent(multiplayerSeat.lobbyId)}/leave`, {
     method: "POST",
     headers: {
@@ -2868,7 +2876,9 @@ setupLabels();
 updateGameModeTooltip();
 if (isMultiplayer) {
   leaveLobbyButton.hidden = false;
-  statusLine.textContent = `Connected as ${multiplayerSeat.color.toUpperCase()} in lobby ${multiplayerSeat.lobbyId}.`;
+  statusLine.textContent = isSpectator
+    ? `Watching lobby ${multiplayerSeat.lobbyId}.`
+    : `Connected as ${multiplayerSeat.color.toUpperCase()} in lobby ${multiplayerSeat.lobbyId}.`;
 }
 newGame();
 startMultiplayerSync();

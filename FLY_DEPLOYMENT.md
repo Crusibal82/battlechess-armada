@@ -25,6 +25,14 @@ BATTLECHESS_DATA_DIR=/tmp/battlechess-armada
 
 The current game keeps lobby/game/chat state in memory, so no database is required yet.
 
+To enable the private admin lobby watcher and bug-report viewer, add your exact login username:
+
+```powershell
+fly secrets set BATTLECHESS_ADMIN_USERS=YourUsername
+```
+
+Multiple admin usernames can be comma-separated.
+
 ## First-Time Deploy
 
 Install and log in to Fly, then run from this project folder:

@@ -122,6 +122,11 @@ input:focus-visible {
   color: var(--red);
 }
 
+.bug-report-button {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
 .lobby-actions {
   border-top: 1px solid var(--line);
   display: grid;
@@ -131,6 +136,10 @@ input:focus-visible {
 }
 
 .lobby-actions .enter-link {
+  grid-column: 1 / -1;
+}
+
+.lobby-actions .bug-report-button {
   grid-column: 1 / -1;
 }
 
@@ -185,6 +194,68 @@ input:focus-visible {
   min-height: 2.35rem;
   padding: 0.55rem 0.8rem;
   text-decoration: none;
+}
+
+.panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.admin-panel {
+  margin-top: 1rem;
+}
+
+.admin-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.admin-item {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+}
+
+.admin-item header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.admin-item time,
+.admin-item small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.bug-report-dialog {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  max-width: min(560px, calc(100vw - 2rem));
+  width: 100%;
+}
+
+.bug-report-dialog::backdrop {
+  background: rgba(5, 9, 13, 0.74);
+}
+
+.bug-report-dialog textarea {
+  background: #25313a;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  min-height: 9rem;
+  padding: 0.65rem;
+  resize: vertical;
 }
 
 .survey-link {
