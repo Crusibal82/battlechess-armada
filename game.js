@@ -2834,7 +2834,7 @@ function confirmGameMode() {
   render();
 }
 
-endTurnButton.addEventListener("click", endTurn);
+endTurnButton.addEventListener("click", () => endTurn());
 newGameButton.addEventListener("click", newGame);
 lockSetupButton.addEventListener("click", lockSetup);
 randomizeSetupButton.addEventListener("click", randomizeDeployment);
