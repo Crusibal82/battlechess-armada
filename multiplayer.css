@@ -187,6 +187,26 @@ input:focus-visible {
   text-decoration: none;
 }
 
+.survey-link {
+  align-items: center;
+  background: rgba(132, 205, 228, 0.16);
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  color: var(--text);
+  display: inline-flex;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+}
+
+.survey-link:hover,
+.survey-link:focus-visible {
+  background: rgba(132, 205, 228, 0.26);
+  outline: none;
+}
+
 @media (max-width: 900px) {
   .lobby-layout,
   .auth-layout {
