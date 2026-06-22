@@ -4,6 +4,7 @@ const submitButton = loginForm.querySelector("button[type='submit']");
 
 function saveAuth(payload) {
   localStorage.setItem("battlechess-auth", JSON.stringify(payload));
+  sessionStorage.setItem("battlechess-auth", JSON.stringify(payload));
 }
 
 async function api(path, body) {
@@ -35,7 +36,11 @@ loginForm.addEventListener("submit", async (event) => {
     const payload = await api("/api/auth/login", formData(loginForm));
     saveAuth(payload);
     statusLine.textContent = "Opening lobbies...";
-    window.location.assign("./multiplayer.html");
+    const params = new URLSearchParams({
+      token: payload.token,
+      username: payload.user?.username || "",
+    });
+    window.location.assign(`./multiplayer.html?${params.toString()}`);
   } catch (error) {
     statusLine.textContent = error.message;
     submitButton.disabled = false;

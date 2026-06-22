@@ -16,7 +16,17 @@ let serverSession = null;
 
 function loadAuth() {
   try {
-    return JSON.parse(localStorage.getItem("battlechess-auth") || "null");
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const username = params.get("username");
+    if (token) {
+      const urlAuth = { token, user: { username: username || "Player" } };
+      localStorage.setItem("battlechess-auth", JSON.stringify(urlAuth));
+      sessionStorage.setItem("battlechess-auth", JSON.stringify(urlAuth));
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return urlAuth;
+    }
+    return JSON.parse(localStorage.getItem("battlechess-auth") || sessionStorage.getItem("battlechess-auth") || "null");
   } catch {
     return null;
   }
@@ -24,8 +34,13 @@ function loadAuth() {
 
 function saveAuth(nextAuth) {
   auth = nextAuth;
-  if (auth) localStorage.setItem("battlechess-auth", JSON.stringify(auth));
-  else localStorage.removeItem("battlechess-auth");
+  if (auth) {
+    localStorage.setItem("battlechess-auth", JSON.stringify(auth));
+    sessionStorage.setItem("battlechess-auth", JSON.stringify(auth));
+  } else {
+    localStorage.removeItem("battlechess-auth");
+    sessionStorage.removeItem("battlechess-auth");
+  }
 }
 
 async function api(path, options = {}) {
@@ -37,14 +52,20 @@ async function api(path, options = {}) {
       ...(options.headers || {}),
     },
   });
-  const payload = await response.json();
+  const text = await response.text();
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`Unexpected server response (${response.status}).`);
+  }
   if (!response.ok) throw new Error(payload.error || "Request failed.");
   return payload;
 }
 
 async function requireLogin() {
   if (!auth?.token) {
-    window.location.href = "/login.html";
+    statusLine.textContent = "Login was not saved by the browser. Return to login and try again.";
     return false;
   }
   try {
@@ -52,9 +73,9 @@ async function requireLogin() {
     serverSession = payload.session;
     playerBadge.textContent = payload.user.username;
     return true;
-  } catch {
+  } catch (error) {
     saveAuth(null);
-    window.location.href = "/login.html";
+    statusLine.textContent = `Login session could not be verified: ${error.message}`;
     return false;
   }
 }
