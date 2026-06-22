@@ -898,6 +898,42 @@ button.active {
     flex-direction: column;
   }
 
+  .toolbar,
+  .phase-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar > *,
+  .phase-actions > * {
+    min-width: 0;
+  }
+
+  .game-layout {
+    gap: 0.65rem;
+  }
+
+  .panel {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+  }
+
+  .board-wrap {
+    justify-self: stretch;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    width: 100%;
+  }
+
+  .board-wrap::-webkit-scrollbar {
+    height: 0.65rem;
+  }
+
+  .board-wrap::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+
   .board {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     grid-template-rows: repeat(12, minmax(0, 1fr));
@@ -921,7 +957,12 @@ button.active {
 
   .board-with-winglets {
     gap: 0.45rem;
-    grid-template-columns: minmax(48px, 0.18fr) minmax(260px, 1fr) minmax(48px, 0.18fr);
+    grid-template-columns: 4rem 25rem 4rem;
+    min-width: 34rem;
+  }
+
+  .board-core {
+    width: 25rem;
   }
 
   .winglet h2 {
@@ -929,7 +970,7 @@ button.active {
   }
 
   .winglet-grid {
-    min-height: 18rem;
+    min-height: 22rem;
   }
 
   .winglet-piece {
@@ -938,5 +979,33 @@ button.active {
 
   .winglet-hp {
     font-size: 0.5rem;
+  }
+
+  .chat-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .toolbar,
+  .phase-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .coordinates {
+    font-size: 0.72rem;
+  }
+
+  .board-with-winglets {
+    grid-template-columns: 3.5rem 22rem 3.5rem;
+    min-width: 30rem;
+  }
+
+  .board-core {
+    width: 22rem;
+  }
+
+  .winglet-grid {
+    min-height: 19.5rem;
   }
 }

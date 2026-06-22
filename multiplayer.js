@@ -102,6 +102,13 @@ function render() {
       leave(button.dataset.leaveLobby).catch(showError);
     });
   });
+  lobbyListEl.querySelectorAll("[data-join-lobby]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectedLobbyId = button.dataset.lobbyId;
+      join(button.dataset.joinLobby).catch(showError);
+    });
+  });
   renderSelectedLobby();
 }
 
@@ -114,7 +121,29 @@ function renderLobbyCard(lobby) {
         ${renderSeat("blue", lobby.players.blue)}
         ${renderSeat("red", lobby.players.red)}
       </button>
-      ${inThisLobby ? `<button class="leave-inline" type="button" data-leave-lobby="${lobby.id}">Leave Lobby</button>` : ""}
+      ${lobby.id === selectedLobbyId ? renderLobbyActions(lobby) : ""}
+      ${inThisLobby && lobby.id !== selectedLobbyId ? `<button class="leave-inline" type="button" data-leave-lobby="${lobby.id}">Leave Lobby</button>` : ""}
+    </div>
+  `;
+}
+
+function renderLobbyActions(lobby) {
+  const seatedSomewhere = Boolean(serverSession?.lobbyId);
+  const inThisLobby = serverSession?.lobbyId === lobby.id;
+  if (inThisLobby) {
+    const href = `/index.html?lobby=${encodeURIComponent(serverSession.lobbyId)}&color=${encodeURIComponent(serverSession.color)}`;
+    return `
+      <div class="lobby-actions">
+        <a class="enter-link" href="${href}">Enter game room</a>
+        <button class="leave-inline" type="button" data-leave-lobby="${lobby.id}">Leave Lobby</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="lobby-actions">
+      <button type="button" data-join-lobby="blue" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.blue ? "disabled" : ""}>Join Blue</button>
+      <button type="button" data-join-lobby="red" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.red ? "disabled" : ""}>Join Red</button>
     </div>
   `;
 }
