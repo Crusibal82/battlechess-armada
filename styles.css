@@ -824,6 +824,10 @@ h2 {
   color: var(--red);
 }
 
+.chat-message.admin strong {
+  color: var(--gold);
+}
+
 .chat-message span {
   color: var(--text);
   overflow-wrap: anywhere;

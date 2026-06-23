@@ -255,13 +255,22 @@ function storedAuthToken() {
     return "";
   }
 }
+function storedAuthUser() {
+  try {
+    return JSON.parse(localStorage.getItem("battlechess-auth") || "null")?.user || null;
+  } catch {
+    return null;
+  }
+}
 const multiplayerSeat = {
   lobbyId: urlParams.get("lobby"),
   color: urlParams.get("color"),
   token: storedAuthToken(),
+  user: storedAuthUser(),
 };
 const isMultiplayer = Boolean(multiplayerSeat.lobbyId && multiplayerSeat.color && multiplayerSeat.token);
 const isSpectator = isMultiplayer && multiplayerSeat.color === "spectator";
+const isAdminSpectator = isSpectator && (multiplayerSeat.user?.isAdmin || String(multiplayerSeat.user?.username || "").toLowerCase() === "bcaadmincrusibal");
 const multiplayerSync = {
   version: 0,
   ready: !isMultiplayer,
@@ -2777,8 +2786,9 @@ function startMultiplayerSync() {
   if (!isMultiplayer) return;
   pollSharedGameState();
   multiplayerSync.pollTimer = window.setInterval(pollSharedGameState, 1500);
-  if (isSpectator) return;
+  if (isSpectator && !isAdminSpectator) return;
   chatPanel.hidden = false;
+  if (isAdminSpectator) chatInput.placeholder = "Message players as GameMaster...";
   pollLobbyChat();
   multiplayerSync.chatTimer = window.setInterval(pollLobbyChat, 2500);
 }

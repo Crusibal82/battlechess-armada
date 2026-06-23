@@ -473,7 +473,7 @@ async function handleApi(req, res, url) {
     if (!auth) return;
     const lobby = findLobby(chatMatch[1]);
     if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
-    if (auth.session.lobbyId !== lobby.id) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+    if (auth.session.lobbyId !== lobby.id && !isAdminUser(auth.user)) return sendJson(res, 403, { error: "You are not seated in this lobby." });
     return sendJson(res, 200, { messages: lobby.chat });
   }
 
@@ -482,7 +482,8 @@ async function handleApi(req, res, url) {
     if (!auth) return;
     const lobby = findLobby(chatMatch[1]);
     if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
-    if (auth.session.lobbyId !== lobby.id || !auth.session.color) return sendJson(res, 403, { error: "You are not seated in this lobby." });
+    const adminUser = isAdminUser(auth.user);
+    if ((auth.session.lobbyId !== lobby.id || !auth.session.color) && !adminUser) return sendJson(res, 403, { error: "You are not seated in this lobby." });
 
     let payload;
     try {
@@ -495,8 +496,8 @@ async function handleApi(req, res, url) {
     if (!text) return sendJson(res, 400, { error: "Message is required." });
     const message = {
       id: crypto.randomBytes(8).toString("hex"),
-      color: auth.session.color,
-      name: auth.user.username,
+      color: adminUser && auth.session.lobbyId !== lobby.id ? "admin" : auth.session.color,
+      name: adminUser && auth.session.lobbyId !== lobby.id ? `${auth.user.username} (GameMaster)` : auth.user.username,
       text,
       createdAt: Date.now(),
     };
