@@ -198,6 +198,7 @@ const state = {
   lastStandLocks: { blue: false, red: false },
   lastSuccessfulHit: null,
   sunkShips: [],
+  playerNames: { blue: null, red: null },
   gameMode: "classic",
   gameModeConfirmed: false,
   gameOver: false,
@@ -212,6 +213,7 @@ const gameOverMessage = document.querySelector("#gameOverMessage");
 const gameModeSelect = document.querySelector("#gameModeSelect");
 const activePlayerEl = document.querySelector("#activePlayer");
 const phaseNameEl = document.querySelector("#phaseName");
+const turnToastEl = document.querySelector("#turnToast");
 const selectedShipEl = document.querySelector("#selectedShip");
 const battleLogEl = document.querySelector("#battleLog");
 const endTurnButton = document.querySelector("#endTurnButton");
@@ -269,6 +271,8 @@ const multiplayerSync = {
   pollTimer: null,
   chatTimer: null,
   chatLastId: null,
+  lastTurnToastKey: null,
+  turnToastTimer: null,
 };
 
 function setupLabels() {
@@ -328,6 +332,7 @@ function newGame() {
   state.lastStandLocks = { blue: false, red: false };
   state.lastSuccessfulHit = null;
   state.sunkShips = [];
+  state.playerNames = state.playerNames || { blue: null, red: null };
   state.gameMode = gameModeSelect.value;
   state.gameModeConfirmed = !isMultiplayer;
   state.gameOver = false;
@@ -402,6 +407,8 @@ function isInside(x, y) {
 }
 
 function playerName(side) {
+  const username = state.playerNames?.[side];
+  if (username) return `Admiral ${username}`;
   return side === "blue" ? "Admiral Blue" : "Admiral Red";
 }
 
@@ -2234,6 +2241,7 @@ function render() {
   statusLine.textContent = state.gameOver
     ? gameOverText()
     : statusText();
+  maybeShowTurnToast();
   renderGameOverBanner();
 
   renderBoard();
@@ -2244,6 +2252,21 @@ function render() {
   renderLog();
   updateButtons();
   scheduleMultiplayerPublish();
+}
+
+function maybeShowTurnToast() {
+  if (!isMultiplayer || isSpectator || state.gameOver || !turnToastEl) return;
+  if (state.active !== multiplayerSeat.color) return;
+  if (state.phase === "setup" || state.phase === "currentSetup") return;
+  const key = `${state.turn}:${state.active}`;
+  if (multiplayerSync.lastTurnToastKey === key) return;
+  multiplayerSync.lastTurnToastKey = key;
+  turnToastEl.textContent = `Your turn, ${playerName(state.active)}`;
+  turnToastEl.hidden = false;
+  window.clearTimeout(multiplayerSync.turnToastTimer);
+  multiplayerSync.turnToastTimer = window.setTimeout(() => {
+    turnToastEl.hidden = true;
+  }, 2000);
 }
 
 function gameOverText() {
@@ -2625,6 +2648,7 @@ function serializeGameState() {
     lastStandLocks: state.lastStandLocks,
     lastSuccessfulHit: state.lastSuccessfulHit,
     sunkShips: state.sunkShips,
+    playerNames: state.playerNames,
     gameMode: state.gameMode,
     gameModeConfirmed: state.gameModeConfirmed,
     gameOver: state.gameOver,
@@ -2658,6 +2682,7 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
     lastStand: hydrateSet(sharedState.lastStand),
     commandBuffs: sharedState.commandBuffs || {},
     sunkShips: Array.isArray(sharedState.sunkShips) ? sharedState.sunkShips : [],
+    playerNames: sharedState.playerNames || state.playerNames || { blue: null, red: null },
   });
   state.gameMode = state.gameMode || "classic";
   state.gameModeConfirmed = Boolean(sharedState.gameModeConfirmed);
@@ -2728,6 +2753,12 @@ async function pollSharedGameState() {
   if (!isMultiplayer || multiplayerSync.applying) return;
   try {
     const payload = await fetchSharedGameState();
+    if (payload.players) {
+      state.playerNames = {
+        blue: payload.players.blue?.name || state.playerNames.blue,
+        red: payload.players.red?.name || state.playerNames.red,
+      };
+    }
     if (payload.state && payload.version > multiplayerSync.version) {
       applySharedGameState(payload.state, payload.version);
     } else if (!payload.state && multiplayerSeat.color === "blue" && multiplayerSync.version === 0) {

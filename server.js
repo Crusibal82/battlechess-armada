@@ -434,7 +434,15 @@ async function handleApi(req, res, url) {
     if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
     if (!lobby.players.blue && !lobby.players.red) return sendJson(res, 404, { error: "Lobby is empty." });
     if (auth.session.lobbyId !== lobby.id && !isAdminUser(auth.user)) return sendJson(res, 403, { error: "You are not seated in this lobby." });
-    return sendJson(res, 200, { state: lobby.gameState, version: lobby.gameVersion, updatedBy: lobby.gameUpdatedBy });
+    return sendJson(res, 200, {
+      state: lobby.gameState,
+      version: lobby.gameVersion,
+      updatedBy: lobby.gameUpdatedBy,
+      players: {
+        blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
+        red: lobby.players.red ? { name: lobby.players.red.name } : null,
+      },
+    });
   }
 
   if (req.method === "PUT" && stateMatch) {

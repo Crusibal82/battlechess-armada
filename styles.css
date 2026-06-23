@@ -133,6 +133,23 @@ h2 {
   border-color: var(--red);
 }
 
+.turn-toast {
+  background: rgba(241, 199, 91, 0.94);
+  border: 1px solid rgba(255, 240, 180, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.38);
+  color: #17130a;
+  font-size: 1.05rem;
+  font-weight: 950;
+  left: 50%;
+  letter-spacing: 0;
+  padding: 0.85rem 1.2rem;
+  position: fixed;
+  top: 1rem;
+  transform: translateX(-50%);
+  z-index: 30;
+}
+
 .toolbar,
 .phase-actions {
   display: flex;
