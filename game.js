@@ -173,6 +173,7 @@ const state = {
   rangeBonus: { blue: 0, red: 0 },
   torpedo: { blue: false, red: false },
   contacts: { blue: new Set(), red: new Set() },
+  mineContacts: { blue: new Set(), red: new Set() },
   shots: { blue: new Set(), red: new Set() },
   mines: [],
   currents: [],
@@ -329,6 +330,7 @@ function newGame() {
   state.rangeBonus = { blue: 0, red: 0 };
   state.torpedo = { blue: false, red: false };
   state.contacts = { blue: new Set(), red: new Set() };
+  state.mineContacts = { blue: new Set(), red: new Set() };
   state.shots = { blue: new Set(), red: new Set() };
   state.mines = [];
   state.currents = [];
@@ -959,10 +961,13 @@ function resolveRamming(attacker, defender, from) {
   }
 
   addLog(`${attackerDescription(attacker)} rammed ${attackerDescription(defender)} at ${coord(defender.x, defender.y)}. Both ships took 1 damage.`);
-  if (!state.gameOver && (attackerDestroyed || defenderDestroyed)) {
-    addLog("A ship was destroyed during ramming, ending the active fleet's turn.");
+  if (!state.gameOver && attackerDestroyed) {
+    addLog("The ramming ship was destroyed, ending the active fleet's turn.");
     endTurn(true);
     return true;
+  }
+  if (!state.gameOver && defenderDestroyed) {
+    addLog("The rammed ship was destroyed. The ramming fleet may continue to Targeting Phase.");
   }
   return false;
 }
@@ -1197,7 +1202,7 @@ function handleSpecialClick(x, y) {
     const occupant = pieceAt(x, y);
     if (state.specialMode === "powerPush" && occupant?.side === enemyOf(piece.side)) {
       damagePiece(occupant, 2, "Power Push");
-      if (state.pieces.some((candidate) => candidate.id === occupant.id)) resolveRamming(piece, occupant, from);
+      if (state.pieces.some((candidate) => candidate.id === occupant.id) && resolveRamming(piece, occupant, from)) return;
       addLog(`${attackerDescription(piece)} used Power Push into ${coord(x, y)}.`);
       finishCardEffect(piece);
       return;
@@ -1346,6 +1351,7 @@ function revealKnightReachableOccupancy(piece) {
     const mine = mineAt(sq.x, sq.y);
     if ((target && target.side !== piece.side) || (mine && mine.side !== piece.side)) {
       state.contacts[piece.side].add(key(sq.x, sq.y));
+      if (mine && mine.side !== piece.side) state.mineContacts[piece.side].add(key(sq.x, sq.y));
       found += 1;
     }
   }
@@ -1575,7 +1581,7 @@ function revealAhead(piece, from, range) {
         state.contacts[piece.side].add(key(sq.x, sq.y));
         found += 1;
       } else if (mine && mine.side !== piece.side) {
-        state.contacts[piece.side].add(key(sq.x, sq.y));
+        state.mineContacts[piece.side].add(key(sq.x, sq.y));
         found += 1;
       }
     }
@@ -1615,7 +1621,7 @@ function reconSquare(piece, x, y) {
     state.contacts[piece.side].add(key(x, y));
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: occupied by an enemy contact.`);
   } else if (mine && mine.side !== piece.side) {
-    state.contacts[piece.side].add(key(x, y));
+    state.mineContacts[piece.side].add(key(x, y));
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: mine detected.`);
   } else {
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: clear water.`);
@@ -1631,7 +1637,7 @@ function deployMine(piece, x, y) {
   const activeMines = state.mines.filter((mine) => mine.side === piece.side);
   if (activeMines.length >= 3) state.mines = state.mines.filter((mine) => mine !== activeMines[0]);
   state.mines.push({ side: piece.side, x, y });
-  addLog(`${playerName(piece.side)} deployed a hidden mine along the traveled path at ${coord(x, y)}.`);
+  addLog(`${playerName(piece.side)} deployed a hidden mine along the traveled path.`);
   clearActionModifiers(piece.side);
   clearSteadyIfActivated(piece);
   finishAction();
@@ -2133,7 +2139,7 @@ function revealDiagonalContacts(piece) {
       }
       const mine = mineAt(x, y);
       if (mine && mine.side !== piece.side) {
-        state.contacts[piece.side].add(key(x, y));
+        state.mineContacts[piece.side].add(key(x, y));
         detected += 1;
       }
       x += dx;
@@ -2392,7 +2398,7 @@ function renderBoard() {
       if (shotVisible) cell.classList.add("shot");
 
       const mine = mineAt(x, y);
-      if (mine && (mine.side === viewer || state.contacts[viewer].has(key(x, y)))) cell.classList.add("mine");
+      if (mine && (mine.side === viewer || state.mineContacts[viewer]?.has(key(x, y)))) cell.classList.add("mine");
 
       const piece = pieceAt(x, y);
       if (piece) {
@@ -2567,6 +2573,10 @@ function visibleLogEntry(entry) {
     return `${enemyName} placed Shifting Currents. Location hidden.`;
   }
 
+  if (entry.startsWith(`${enemyName} deployed a hidden mine along the traveled path at `)) {
+    return `${enemyName} deployed a hidden mine along the traveled path.`;
+  }
+
   if (entry.startsWith(`${enemyName} placed `) && / at [A-L](?:[1-9]|1[0-2])\.$/.test(entry)) {
     return `${enemyName} repositioned a ship during deployment.`;
   }
@@ -2673,6 +2683,7 @@ function serializeGameState() {
     rangeBonus: state.rangeBonus,
     torpedo: state.torpedo,
     contacts: { blue: serializeSet(state.contacts.blue), red: serializeSet(state.contacts.red) },
+    mineContacts: { blue: serializeSet(state.mineContacts.blue), red: serializeSet(state.mineContacts.red) },
     shots: { blue: serializeSet(state.shots.blue), red: serializeSet(state.shots.red) },
     mines: state.mines,
     currents: state.currents.map((current) => ({ ...current, revealedTo: serializeSet(current.revealedTo) })),
@@ -2720,6 +2731,10 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
     contacts: {
       blue: hydrateSet(sharedState.contacts?.blue),
       red: hydrateSet(sharedState.contacts?.red),
+    },
+    mineContacts: {
+      blue: hydrateSet(sharedState.mineContacts?.blue),
+      red: hydrateSet(sharedState.mineContacts?.red),
     },
     shots: {
       blue: hydrateSet(sharedState.shots?.blue),
