@@ -57,6 +57,17 @@ label span {
   max-width: 920px;
 }
 
+.game-summary {
+  margin-bottom: 1rem;
+}
+
+.game-summary p {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
 .auth-layout {
   display: grid;
   gap: 1rem;

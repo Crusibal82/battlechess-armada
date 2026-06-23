@@ -150,6 +150,25 @@ h2 {
   z-index: 30;
 }
 
+.initiative-toast {
+  background: rgba(27, 34, 41, 0.96);
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.48);
+  color: var(--text);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 950;
+  left: 50%;
+  letter-spacing: 0;
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 1.2rem 1.4rem;
+  position: fixed;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 35;
+}
+
 .toolbar,
 .phase-actions {
   display: flex;
@@ -767,6 +786,53 @@ h2 {
   display: grid;
   gap: 1rem;
   padding: 1rem;
+}
+
+.bug-report-dialog {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  max-width: min(560px, calc(100vw - 2rem));
+  width: 100%;
+}
+
+.bug-report-dialog::backdrop {
+  background: rgba(5, 9, 13, 0.74);
+}
+
+.bug-report-modal {
+  background: rgba(27, 34, 41, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.36);
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.bug-report-modal p {
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+}
+
+.bug-report-modal label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bug-report-modal input,
+.bug-report-modal textarea {
+  background: #25313a;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  padding: 0.65rem;
+}
+
+.bug-report-modal textarea {
+  min-height: 9rem;
+  resize: vertical;
 }
 
 .reaction-modal p {

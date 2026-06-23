@@ -199,6 +199,10 @@ const state = {
   lastSuccessfulHit: null,
   sunkShips: [],
   playerNames: { blue: null, red: null },
+  hostColor: null,
+  modeConfirmations: { blue: false, red: false },
+  initiativeSide: "blue",
+  initiativeToastKey: null,
   gameMode: "classic",
   gameModeConfirmed: false,
   gameOver: false,
@@ -239,6 +243,7 @@ const chatMessagesEl = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const rulesButton = document.querySelector("#rulesButton");
+const bugReportButton = document.querySelector("#bugReportButton");
 const rulesDialog = document.querySelector("#rulesDialog");
 const closeRulesButton = document.querySelector("#closeRulesButton");
 const rulesContentEl = document.querySelector("#rulesContent");
@@ -247,6 +252,12 @@ const reactionTitleEl = document.querySelector("#reactionTitle");
 const reactionTextEl = document.querySelector("#reactionText");
 const reactionCardsEl = document.querySelector("#reactionCards");
 const reactionPassButton = document.querySelector("#reactionPassButton");
+const initiativeToastEl = document.querySelector("#initiativeToast");
+const bugReportDialog = document.querySelector("#bugReportDialog");
+const bugReportForm = document.querySelector("#bugReportForm");
+const bugReportTitle = document.querySelector("#bugReportTitle");
+const bugReportDetails = document.querySelector("#bugReportDetails");
+const cancelBugReportButton = document.querySelector("#cancelBugReportButton");
 const urlParams = new URLSearchParams(window.location.search);
 function storedAuthToken() {
   try {
@@ -282,6 +293,8 @@ const multiplayerSync = {
   chatLastId: null,
   lastTurnToastKey: null,
   turnToastTimer: null,
+  lastInitiativeToastKey: null,
+  initiativeToastTimer: null,
 };
 
 function setupLabels() {
@@ -342,6 +355,10 @@ function newGame() {
   state.lastSuccessfulHit = null;
   state.sunkShips = [];
   state.playerNames = state.playerNames || { blue: null, red: null };
+  state.hostColor = state.hostColor || (isMultiplayer && !isSpectator ? multiplayerSeat.color : "blue");
+  state.modeConfirmations = isMultiplayer ? { blue: false, red: false } : { blue: true, red: true };
+  state.initiativeSide = randomSide();
+  state.initiativeToastKey = null;
   state.gameMode = gameModeSelect.value;
   state.gameModeConfirmed = !isMultiplayer;
   state.gameOver = false;
@@ -374,6 +391,10 @@ function newGame() {
     addLog("Deployment begins. Blue may rearrange ships inside rows 1-3, then lock setup.");
   }
   render();
+}
+
+function randomSide() {
+  return Math.random() < 0.5 ? "blue" : "red";
 }
 
 function buildDeck() {
@@ -416,6 +437,7 @@ function isInside(x, y) {
 }
 
 function playerName(side) {
+  if (!side) return "Admiral";
   const username = state.playerNames?.[side];
   if (username) return `Admiral ${username}`;
   return side === "blue" ? "Admiral Blue" : "Admiral Red";
@@ -743,9 +765,10 @@ function handleCurrentSetupClick(x, y) {
     addLog("Red places the second Shifting Currents zone.");
   } else {
     state.setupSide = null;
-    state.active = "blue";
+    state.active = state.initiativeSide || randomSide();
     state.phase = "move";
-    addLog("Shifting Currents placed. Battle begins. Blue fleet has initiative.");
+    state.initiativeToastKey = `${Date.now()}:${state.active}`;
+    addLog(`Shifting Currents placed. Battle begins. ${playerName(state.active)} has initiative.`);
   }
   render();
 }
@@ -1763,7 +1786,7 @@ function completeEndTurn() {
   clearTurnModifiers(state.active);
   if (state.passAbilityCooldown[state.active] > 0) state.passAbilityCooldown[state.active] -= 1;
   state.active = enemyOf(state.active);
-  if (state.active === "blue") state.turn += 1;
+  if (state.active === (state.initiativeSide || "blue")) state.turn += 1;
   clearCommandBuffs(state.active, "turnStart");
   state.phase = "move";
   state.selectedId = null;
@@ -2250,6 +2273,7 @@ function render() {
   statusLine.textContent = state.gameOver
     ? gameOverText()
     : statusText();
+  maybeShowInitiativeToast();
   maybeShowTurnToast();
   renderGameOverBanner();
 
@@ -2261,6 +2285,18 @@ function render() {
   renderLog();
   updateButtons();
   scheduleMultiplayerPublish();
+}
+
+function maybeShowInitiativeToast() {
+  if (!isMultiplayer || state.gameOver || !initiativeToastEl || !state.initiativeToastKey) return;
+  if (multiplayerSync.lastInitiativeToastKey === state.initiativeToastKey) return;
+  multiplayerSync.lastInitiativeToastKey = state.initiativeToastKey;
+  initiativeToastEl.textContent = `${playerName(state.active)} moves first`;
+  initiativeToastEl.hidden = false;
+  window.clearTimeout(multiplayerSync.initiativeToastTimer);
+  multiplayerSync.initiativeToastTimer = window.setTimeout(() => {
+    initiativeToastEl.hidden = true;
+  }, 3000);
 }
 
 function maybeShowTurnToast() {
@@ -2297,8 +2333,10 @@ function statusText() {
     return `${playerName(state.reaction.side)} is deciding whether to play an Instant Special Action card.`;
   }
   if (isMultiplayer && !state.gameModeConfirmed && !state.gameOver) {
-    if (viewSide() === "red") return `Admiral Blue proposed ${GAME_MODES[state.gameMode].name}. Confirm the game mode to begin.`;
-    return `Waiting for Admiral Red to confirm ${GAME_MODES[state.gameMode].name}.`;
+    if (isSpectator) return `Waiting for players to confirm ${GAME_MODES[state.gameMode].name}.`;
+    if (multiplayerSeat.color === state.hostColor && !state.modeConfirmations[multiplayerSeat.color]) return `Select a game mode, then confirm ${GAME_MODES[state.gameMode].name}.`;
+    if (!state.modeConfirmations[multiplayerSeat.color]) return `${playerName(state.hostColor)} selected ${GAME_MODES[state.gameMode].name}. Confirm the game mode to begin.`;
+    return `Waiting for the other player to confirm ${GAME_MODES[state.gameMode].name}.`;
   }
   if (state.phase === "setup") {
     if (isMultiplayer && state.setupSide !== viewSide()) return "Opponent deployment in progress. Waiting for setup to be locked.";
@@ -2569,10 +2607,13 @@ function updateButtons() {
   else if ((state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) endTurnButton.textContent = "Begin Targeting";
   else if (state.phase === "action") endTurnButton.textContent = state.actionTaken ? "End Turn" : "Pass Targeting";
   else endTurnButton.textContent = "End Turn";
-  newGameButton.disabled = isMultiplayer && (multiplayerSeat.color !== "blue" || !state.gameOver);
-  gameModeSelect.disabled = isMultiplayer && (multiplayerSeat.color !== "blue" || (!state.gameOver && (state.gameModeConfirmed || state.phase !== "setup")));
-  confirmModeButton.hidden = !isMultiplayer || multiplayerSeat.color !== "red" || state.gameModeConfirmed || state.gameOver;
-  confirmModeButton.disabled = !isMultiplayer || multiplayerSeat.color !== "red" || state.gameModeConfirmed || state.gameOver;
+  const isHost = !isMultiplayer || multiplayerSeat.color === state.hostColor;
+  const canConfirmMode = isMultiplayer && !isSpectator && ["blue", "red"].includes(multiplayerSeat.color) && !state.gameModeConfirmed && !state.gameOver;
+  newGameButton.disabled = isMultiplayer && (!isHost || !state.gameOver);
+  gameModeSelect.disabled = isMultiplayer && (!isHost || state.gameModeConfirmed || state.phase !== "setup");
+  confirmModeButton.hidden = !canConfirmMode;
+  confirmModeButton.disabled = !canConfirmMode || Boolean(state.modeConfirmations[multiplayerSeat.color]);
+  confirmModeButton.textContent = state.modeConfirmations[multiplayerSeat.color] ? "Mode Confirmed" : "Confirm Mode";
   lockSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   randomizeSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   resupplyButton.disabled = !canUseTurn || state.phase !== "move" || pieceMovedThisTurn || state.turn < 3 || state.gameOver;
@@ -2658,6 +2699,10 @@ function serializeGameState() {
     lastSuccessfulHit: state.lastSuccessfulHit,
     sunkShips: state.sunkShips,
     playerNames: state.playerNames,
+    hostColor: state.hostColor,
+    modeConfirmations: state.modeConfirmations,
+    initiativeSide: state.initiativeSide,
+    initiativeToastKey: state.initiativeToastKey,
     gameMode: state.gameMode,
     gameModeConfirmed: state.gameModeConfirmed,
     gameOver: state.gameOver,
@@ -2692,9 +2737,13 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
     commandBuffs: sharedState.commandBuffs || {},
     sunkShips: Array.isArray(sharedState.sunkShips) ? sharedState.sunkShips : [],
     playerNames: sharedState.playerNames || state.playerNames || { blue: null, red: null },
+    hostColor: sharedState.hostColor || state.hostColor || null,
+    modeConfirmations: sharedState.modeConfirmations || { blue: false, red: false },
+    initiativeSide: sharedState.initiativeSide || "blue",
+    initiativeToastKey: sharedState.initiativeToastKey || null,
   });
   state.gameMode = state.gameMode || "classic";
-  state.gameModeConfirmed = Boolean(sharedState.gameModeConfirmed);
+  state.gameModeConfirmed = Boolean(sharedState.gameModeConfirmed || (state.modeConfirmations.blue && state.modeConfirmations.red));
   state.reaction = sharedState.reaction || null;
   state.actionTaken = Boolean(sharedState.actionTaken);
   state.nextMoveBonus = sharedState.nextMoveBonus || { blue: 0, red: 0 };
@@ -2762,6 +2811,7 @@ async function pollSharedGameState() {
   if (!isMultiplayer || multiplayerSync.applying) return;
   try {
     const payload = await fetchSharedGameState();
+    if (payload.hostColor) state.hostColor = payload.hostColor;
     if (payload.players) {
       state.playerNames = {
         blue: payload.players.blue?.name || state.playerNames.blue,
@@ -2770,7 +2820,7 @@ async function pollSharedGameState() {
     }
     if (payload.state && payload.version > multiplayerSync.version) {
       applySharedGameState(payload.state, payload.version);
-    } else if (!payload.state && multiplayerSeat.color === "blue" && multiplayerSync.version === 0) {
+    } else if (!payload.state && multiplayerSeat.color === state.hostColor && multiplayerSync.version === 0) {
       multiplayerSync.ready = true;
       publishSharedGameState();
     } else if (!payload.state) {
@@ -2849,6 +2899,31 @@ async function sendLobbyChat(event) {
   if (response.ok) pollLobbyChat();
 }
 
+function openBugReport() {
+  if (!isMultiplayer || isSpectator) return;
+  bugReportTitle.value = "";
+  bugReportDetails.value = "";
+  bugReportDialog.showModal();
+}
+
+async function submitBugReport(event) {
+  event.preventDefault();
+  if (!isMultiplayer || isSpectator) return;
+  const response = await fetch("/api/bug-reports", {
+    method: "POST",
+    headers: multiplayerHeaders(),
+    body: JSON.stringify({
+      lobbyId: multiplayerSeat.lobbyId,
+      title: bugReportTitle.value,
+      details: bugReportDetails.value,
+    }),
+  });
+  if (!response.ok) throw new Error("Bug report could not be submitted.");
+  bugReportDialog.close();
+  addLog("Bug report submitted. Thank you.");
+  render();
+}
+
 async function leaveLobbyFromGame() {
   if (!isMultiplayer) return;
   if (isSpectator) {
@@ -2890,17 +2965,20 @@ function closeRules() {
 
 function proposeGameMode() {
   updateGameModeTooltip();
-  if (!isMultiplayer || multiplayerSeat.color !== "blue" || state.gameOver) return;
+  if (!isMultiplayer || isSpectator || multiplayerSeat.color !== state.hostColor || state.gameOver || state.gameModeConfirmed) return;
   state.gameMode = gameModeSelect.value;
+  state.modeConfirmations = { blue: false, red: false };
   state.gameModeConfirmed = false;
-  addLog(`Admiral Blue proposed ${GAME_MODES[state.gameMode].name}.`);
+  addLog(`${playerName(multiplayerSeat.color)} selected ${GAME_MODES[state.gameMode].name}. Both players must confirm.`);
   render();
 }
 
 function confirmGameMode() {
-  if (!isMultiplayer || multiplayerSeat.color !== "red" || state.gameModeConfirmed || state.gameOver) return;
-  state.gameModeConfirmed = true;
-  addLog(`Admiral Red confirmed ${GAME_MODES[state.gameMode].name}. Deployment may begin.`);
+  if (!isMultiplayer || isSpectator || !["blue", "red"].includes(multiplayerSeat.color) || state.gameModeConfirmed || state.gameOver) return;
+  state.modeConfirmations[multiplayerSeat.color] = true;
+  state.gameModeConfirmed = Boolean(state.modeConfirmations.blue && state.modeConfirmations.red);
+  addLog(`${playerName(multiplayerSeat.color)} confirmed ${GAME_MODES[state.gameMode].name}.`);
+  if (state.gameModeConfirmed) addLog(`${GAME_MODES[state.gameMode].name} confirmed by both players. Deployment may begin.`);
   render();
 }
 
@@ -2912,6 +2990,9 @@ resupplyButton.addEventListener("click", resupply);
 surrenderButton.addEventListener("click", surrenderGame);
 leaveLobbyButton.addEventListener("click", () => leaveLobbyFromGame().catch((error) => addLog(error.message)));
 rulesButton.addEventListener("click", openRules);
+bugReportButton.addEventListener("click", openBugReport);
+bugReportForm.addEventListener("submit", (event) => submitBugReport(event).catch((error) => addLog(error.message)));
+cancelBugReportButton.addEventListener("click", () => bugReportDialog.close());
 closeRulesButton.addEventListener("click", closeRules);
 rulesDialog.addEventListener("click", (event) => {
   if (event.target === rulesDialog) closeRules();
@@ -2938,6 +3019,7 @@ setupLabels();
 updateGameModeTooltip();
 if (isMultiplayer) {
   leaveLobbyButton.hidden = false;
+  bugReportButton.hidden = isSpectator;
   statusLine.textContent = isSpectator
     ? `Watching lobby ${multiplayerSeat.lobbyId}.`
     : `Connected as ${multiplayerSeat.color.toUpperCase()} in lobby ${multiplayerSeat.lobbyId}.`;

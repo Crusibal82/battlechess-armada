@@ -12,18 +12,11 @@ const adminPanel = document.querySelector("#adminPanel");
 const refreshAdminButton = document.querySelector("#refreshAdminButton");
 const activeGamesList = document.querySelector("#activeGamesList");
 const bugReportsList = document.querySelector("#bugReportsList");
-const bugReportDialog = document.querySelector("#bugReportDialog");
-const bugReportForm = document.querySelector("#bugReportForm");
-const bugReportLobby = document.querySelector("#bugReportLobby");
-const bugReportTitle = document.querySelector("#bugReportTitle");
-const bugReportDetails = document.querySelector("#bugReportDetails");
-const cancelBugReportButton = document.querySelector("#cancelBugReportButton");
 
 let lobbies = [];
 let selectedLobbyId = null;
 let auth = loadAuth();
 let serverSession = null;
-let currentBugLobbyId = null;
 
 function loadAuth() {
   try {
@@ -123,12 +116,6 @@ function render() {
       join(button.dataset.joinLobby).catch(showError);
     });
   });
-  lobbyListEl.querySelectorAll("[data-report-lobby]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openBugReport(button.dataset.reportLobby);
-    });
-  });
   renderSelectedLobby();
 }
 
@@ -142,7 +129,6 @@ function renderLobbyCard(lobby) {
         ${renderSeat("red", lobby.players.red)}
       </button>
       ${lobby.id === selectedLobbyId ? renderLobbyActions(lobby) : ""}
-      ${lobby.id !== selectedLobbyId ? `<button class="bug-report-button" type="button" data-report-lobby="${lobby.id}">Report Bug</button>` : ""}
       ${inThisLobby && lobby.id !== selectedLobbyId ? `<button class="leave-inline" type="button" data-leave-lobby="${lobby.id}">Leave Lobby</button>` : ""}
     </div>
   `;
@@ -157,7 +143,6 @@ function renderLobbyActions(lobby) {
       <div class="lobby-actions">
         <a class="enter-link" href="${href}">Enter game room</a>
         <button class="leave-inline" type="button" data-leave-lobby="${lobby.id}">Leave Lobby</button>
-        <button class="bug-report-button" type="button" data-report-lobby="${lobby.id}">Report Bug</button>
       </div>
     `;
   }
@@ -166,7 +151,6 @@ function renderLobbyActions(lobby) {
     <div class="lobby-actions">
       <button type="button" data-join-lobby="blue" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.blue ? "disabled" : ""}>Join Blue</button>
       <button type="button" data-join-lobby="red" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.red ? "disabled" : ""}>Join Red</button>
-      <button class="bug-report-button" type="button" data-report-lobby="${lobby.id}">Report Bug</button>
     </div>
   `;
 }
@@ -241,32 +225,6 @@ async function logout() {
   }
 }
 
-function openBugReport(lobbyId) {
-  const lobby = lobbies.find((candidate) => candidate.id === lobbyId);
-  if (!lobby) return;
-  currentBugLobbyId = lobby.id;
-  bugReportLobby.textContent = `Reporting an issue for ${lobby.name}`;
-  bugReportTitle.value = "";
-  bugReportDetails.value = "";
-  bugReportDialog.showModal();
-}
-
-async function submitBugReport(event) {
-  event.preventDefault();
-  if (!currentBugLobbyId) return;
-  await api("/api/bug-reports", {
-    method: "POST",
-    body: JSON.stringify({
-      lobbyId: currentBugLobbyId,
-      title: bugReportTitle.value,
-      details: bugReportDetails.value,
-    }),
-  });
-  bugReportDialog.close();
-  statusLine.textContent = "Bug report submitted. Thank you.";
-  if (auth?.user?.isAdmin) loadAdminPanel().catch(showError);
-}
-
 async function loadAdminPanel() {
   if (!auth?.user?.isAdmin) return;
   adminPanel.hidden = false;
@@ -336,8 +294,6 @@ joinBlueButton.addEventListener("click", () => join("blue").catch(showError));
 joinRedButton.addEventListener("click", () => join("red").catch(showError));
 leaveButton.addEventListener("click", () => leave().catch(showError));
 refreshAdminButton.addEventListener("click", () => loadAdminPanel().catch(showError));
-bugReportForm.addEventListener("submit", (event) => submitBugReport(event).catch(showError));
-cancelBugReportButton.addEventListener("click", () => bugReportDialog.close());
 
 function showError(error) {
   statusLine.textContent = error.message;

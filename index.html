@@ -25,6 +25,7 @@
           </label>
           <button id="confirmModeButton" type="button" hidden>Confirm Mode</button>
           <button id="rulesButton" type="button">Rules</button>
+          <button id="bugReportButton" type="button" hidden>Report Bug</button>
           <button id="newGameButton" type="button">New Game</button>
           <button id="lockSetupButton" type="button">Lock Setup</button>
           <button id="randomizeSetupButton" type="button" title="During deployment, randomly place your ships inside their legal setup zones.">Randomize Deployment</button>
@@ -40,6 +41,7 @@
       </section>
 
       <div id="turnToast" class="turn-toast" role="status" aria-live="polite" hidden>Your turn</div>
+      <div id="initiativeToast" class="initiative-toast" role="status" aria-live="polite" hidden>First move</div>
 
       <section class="game-layout">
         <aside class="panel">
@@ -143,6 +145,28 @@
           <button id="reactionPassButton" type="button">Pass</button>
         </div>
       </div>
+    </dialog>
+
+    <dialog id="bugReportDialog" class="bug-report-dialog">
+      <form id="bugReportForm" method="dialog" class="bug-report-modal">
+        <div>
+          <span class="eyebrow">Playtest Feedback</span>
+          <strong>Report a Bug</strong>
+          <p>Describe what happened and what you expected. The current lobby and turn information will be attached automatically.</p>
+        </div>
+        <label>
+          <span>Short Title</span>
+          <input id="bugReportTitle" maxlength="120" placeholder="What went wrong?" />
+        </label>
+        <label>
+          <span>Details</span>
+          <textarea id="bugReportDetails" maxlength="3000" required placeholder="What happened, what phase were you in, and what did you expect?"></textarea>
+        </label>
+        <div class="reaction-actions">
+          <button id="submitBugReportButton" type="submit">Submit Report</button>
+          <button id="cancelBugReportButton" type="button">Cancel</button>
+        </div>
+      </form>
     </dialog>
 
     <script src="game.js"></script>

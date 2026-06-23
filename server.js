@@ -226,10 +226,17 @@ function publicLobby(lobby) {
       blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
       red: lobby.players.red ? { name: lobby.players.red.name } : null,
     },
+    hostColor: lobbyHostColor(lobby),
     openSeats: COLORS.filter((color) => !lobby.players[color]),
     activeGame: Boolean(lobby.gameState && !lobby.gameState.gameOver),
     updatedAt: lobby.updatedAt,
   };
+}
+
+function lobbyHostColor(lobby) {
+  return COLORS
+    .filter((color) => lobby.players[color])
+    .sort((a, b) => lobby.players[a].joinedAt - lobby.players[b].joinedAt)[0] || null;
 }
 
 function adminLobby(lobby) {
@@ -438,6 +445,7 @@ async function handleApi(req, res, url) {
       state: lobby.gameState,
       version: lobby.gameVersion,
       updatedBy: lobby.gameUpdatedBy,
+      hostColor: lobbyHostColor(lobby),
       players: {
         blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
         red: lobby.players.red ? { name: lobby.players.red.name } : null,
