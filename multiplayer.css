@@ -72,6 +72,52 @@ label span {
   gap: 0.25rem;
 }
 
+.patch-notes {
+  align-content: start;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.patch-heading {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.patch-heading h2 {
+  margin: 0;
+}
+
+.patch-entry {
+  background: rgba(34, 43, 51, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.8rem;
+}
+
+.patch-entry header {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.patch-entry time {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.patch-entry ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.patch-entry li + li {
+  margin-top: 0.35rem;
+}
+
 input:focus-visible {
   border-color: var(--blue);
   outline: none;
