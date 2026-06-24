@@ -839,20 +839,6 @@ function moveSelectedTo(piece, x, y) {
   const occupant = pieceAt(x, y);
   state.contacts[enemyOf(piece.side)].add(key(x, y));
 
-  if (resolveCurrentEntry(piece, from, { x, y })) {
-    if (state.gameOver || state.active !== piece.side) {
-      render();
-      return;
-    }
-    state.lastMove = { from, to: { x: piece.x, y: piece.y } };
-    state.movedPieceId = piece.id;
-    state.selectedId = piece.id;
-    promoteIfNeeded(piece);
-    if (!state.gameOver) addLog("Movement complete. Play any Movement Phase cards, then begin Targeting.");
-    render();
-    return;
-  }
-
   if (occupant && occupant.side !== piece.side) {
     const rammingEndedTurn = resolveRamming(piece, occupant, from);
     if (rammingEndedTurn) {
@@ -863,6 +849,7 @@ function moveSelectedTo(piece, x, y) {
     piece.y = y;
     resolveMineEntry(piece);
     resolveOverwatch(piece);
+    resolveCurrentEntry(piece, from, { x, y });
     addLog(`${playerName(piece.side)} moved to ${coord(piece.x, piece.y)}.`);
   }
 
@@ -875,32 +862,34 @@ function moveSelectedTo(piece, x, y) {
 }
 
 function resolveCurrentEntry(piece, from, to = { x: piece.x, y: piece.y }, visited = new Set()) {
-  const entered = firstEnteredCurrent(from, to, visited);
-  const current = entered?.current;
+  const current = currentAt(to.x, to.y);
   if (!current) return false;
+  if (visited.has(current.id)) return false;
   visited.add(current.id);
-  piece.x = entered.square.x;
-  piece.y = entered.square.y;
+  piece.x = to.x;
+  piece.y = to.y;
   current.revealedTo = current.revealedTo || new Set([current.side]);
   current.revealedTo.add(piece.side);
   state.currentAffectedPieceId = piece.id;
-  const dx = Math.sign(piece.x - from.x);
-  const dy = Math.sign(piece.y - from.y);
+  const dx = Math.sign(to.x - from.x);
+  const dy = Math.sign(to.y - from.y);
+  if (dx === 0 && dy === 0) return true;
   const forward = Math.random() >= 0.5;
   const drift = { x: piece.x + (forward ? dx : -dx), y: piece.y + (forward ? dy : -dy) };
-  addLog(`${attackerDescription(piece)} entered Shifting Currents and drifted ${forward ? "forward" : "backward"}.`);
+  addLog(`${attackerDescription(piece)} came to rest in Shifting Currents and drifted ${forward ? "forward" : "backward"}.`);
   if (isInside(drift.x, drift.y)) {
     const occupant = pieceAt(drift.x, drift.y);
     if (occupant && occupant.side !== piece.side) {
       const endedTurn = resolveRamming(piece, occupant, { x: piece.x, y: piece.y });
       if (endedTurn || state.gameOver || state.active !== piece.side) return true;
+      resolveCurrentEntry(piece, { x: piece.x, y: piece.y }, { x: piece.x, y: piece.y }, visited);
     }
     else if (!occupant) {
       const driftFrom = { x: piece.x, y: piece.y };
       piece.x = drift.x;
       piece.y = drift.y;
       resolveMineEntry(piece);
-      resolveCurrentEntry(piece, driftFrom, drift, visited);
+      resolveCurrentEntry(piece, driftFrom, { x: piece.x, y: piece.y }, visited);
     }
   }
   if (!state.pendingCurrentShifts.includes(current)) {
@@ -908,16 +897,6 @@ function resolveCurrentEntry(piece, from, to = { x: piece.x, y: piece.y }, visit
     addLog(`${playerName(current.side)} will roll to shift this Shifting Current after the Targeting Phase.`);
   }
   return true;
-}
-
-function firstEnteredCurrent(from, to, visited = new Set()) {
-  let previousCurrent = currentAt(from.x, from.y);
-  for (const square of pathBetween(from, to).slice(1)) {
-    const current = currentAt(square.x, square.y);
-    if (current && current !== previousCurrent && !visited.has(current.id)) return { current, square };
-    previousCurrent = current;
-  }
-  return null;
 }
 
 function shiftCurrent(current) {
@@ -2613,8 +2592,7 @@ function updateButtons() {
   const kingSelected = selectedPiece()?.type === "king" && selectedPiece()?.side === state.active && state.phase === "move" && !pieceMovedThisTurn;
   const phaseButtonLocked = state.phase === "action" && state.turn > 2 && !state.actionTaken;
   const passAbilityLocked = state.passAbilityCooldown[state.active] > 0;
-  if (state.phase === "setup") endTurnButton.textContent = "Lock Setup";
-  else if ((state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) endTurnButton.textContent = "Begin Targeting";
+  if ((state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) endTurnButton.textContent = "Begin Targeting";
   else if (state.phase === "action") endTurnButton.textContent = state.actionTaken ? "End Turn" : "Pass Targeting";
   else endTurnButton.textContent = "End Turn";
   const isHost = !isMultiplayer || multiplayerSeat.color === state.hostColor;
@@ -2624,11 +2602,13 @@ function updateButtons() {
   confirmModeButton.hidden = !canConfirmMode;
   confirmModeButton.disabled = !canConfirmMode || Boolean(state.modeConfirmations[multiplayerSeat.color]);
   confirmModeButton.textContent = state.modeConfirmations[multiplayerSeat.color] ? "Mode Confirmed" : "Confirm Mode";
+  lockSetupButton.hidden = state.phase !== "setup";
+  randomizeSetupButton.hidden = state.phase !== "setup";
   lockSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   randomizeSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   resupplyButton.disabled = !canUseTurn || state.phase !== "move" || pieceMovedThisTurn || state.turn < 3 || state.gameOver;
   surrenderButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup";
-  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "currentSetup" || phaseButtonLocked;
+  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || phaseButtonLocked;
   reconButton.disabled = reactionOpen || !canUseTurn || !canAct;
   mineButton.disabled = reactionOpen || !canUseTurn || !canAct;
   repairButton.disabled = reactionOpen || !canUseTurn || !canAct || passAbilityLocked || movedPiece()?.type === "pawn" || movedPiece()?.hp >= movedPiece()?.maxHp;
