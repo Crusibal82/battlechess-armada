@@ -178,6 +178,7 @@ const state = {
   mines: [],
   currents: [],
   pendingCurrentShifts: [],
+  currentShift: null,
   currentAffectedPieceId: null,
   decks: { blue: [], red: [] },
   hands: { blue: [], red: [] },
@@ -335,6 +336,7 @@ function newGame() {
   state.mines = [];
   state.currents = [];
   state.pendingCurrentShifts = [];
+  state.currentShift = null;
   state.currentAffectedPieceId = null;
   state.decks = { blue: buildDeck(), red: buildDeck() };
   state.hands = { blue: [], red: [] };
@@ -651,6 +653,11 @@ function handleCellClick(x, y) {
     return;
   }
 
+  if (state.phase === "currentShift") {
+    handleCurrentShiftClick(x, y);
+    return;
+  }
+
   if (state.reaction) {
     if (state.specialMode) {
       handleSpecialClick(x, y);
@@ -791,6 +798,17 @@ function currentZoneOverlaps(x, y) {
   return false;
 }
 
+function currentZoneOverlapsExcept(x, y, currentId) {
+  for (let yy = y - 1; yy <= y + 1; yy++) {
+    for (let xx = x - 1; xx <= x + 1; xx++) {
+      if (!isInside(xx, yy)) return true;
+      const current = currentAt(xx, yy);
+      if (current && current.id !== currentId) return true;
+    }
+  }
+  return false;
+}
+
 function squareInList(x, y, squares) {
   return squares.some((sq) => sq.x === x && sq.y === y);
 }
@@ -892,8 +910,8 @@ function resolveCurrentEntry(piece, from, to = { x: piece.x, y: piece.y }, visit
       resolveCurrentEntry(piece, driftFrom, { x: piece.x, y: piece.y }, visited);
     }
   }
-  if (!state.pendingCurrentShifts.includes(current)) {
-    state.pendingCurrentShifts.push(current);
+  if (!state.pendingCurrentShifts.some((entry) => (typeof entry === "string" ? entry : entry.id) === current.id)) {
+    state.pendingCurrentShifts.push(current.id);
     addLog(`${playerName(current.side)} will roll to shift this Shifting Current after the Targeting Phase.`);
   }
   return true;
@@ -916,6 +934,31 @@ function shiftCurrent(current) {
   current.x = Math.max(1, Math.min(BOARD_SIZE - 2, current.x + dx));
   current.y = Math.max(1, Math.min(BOARD_SIZE - 2, current.y + dy));
   addLog(`Shifting Currents shifted and is now centered on ${coord(current.x, current.y)}.`);
+}
+
+function currentShiftTargets(current) {
+  if (!current) return [];
+  return getDirectionalSteps("any", current.side)
+    .map(([dx, dy]) => ({ x: current.x + dx * 3, y: current.y + dy * 3 }))
+    .filter((sq) => sq.x >= 1 && sq.x <= BOARD_SIZE - 2 && sq.y >= 1 && sq.y <= BOARD_SIZE - 2)
+    .filter((sq) => !currentZoneOverlapsExcept(sq.x, sq.y, current.id));
+}
+
+function activeCurrentShift() {
+  return state.currents.find((current) => current.id === state.currentShift?.currentId) || null;
+}
+
+function handleCurrentShiftClick(x, y) {
+  const current = activeCurrentShift();
+  if (!current || (isMultiplayer && state.currentShift?.side !== multiplayerSeat.color)) return;
+  if (!squareInList(x, y, currentShiftTargets(current))) return;
+  current.x = x;
+  current.y = y;
+  current.revealedTo = current.revealedTo || new Set([current.side]);
+  current.revealedTo.add(current.side);
+  addLog(`${playerName(current.side)} moved Shifting Currents to ${coord(x, y)}.`);
+  state.currentShift = null;
+  completeEndTurn();
 }
 
 function resolveRamming(attacker, defender, from) {
@@ -983,19 +1026,7 @@ function attackSquare(piece, x, y) {
 function performShot(piece, x, y, options = {}) {
   const finish = options.finish !== false;
   if (pieceAt(x, y)?.side === piece.side) return false;
-  recordShot(piece.side, x, y);
-
-  let damage = (options.damage ?? 1) + state.attackBonus[piece.side];
-  const commandBuff = commandBuffFor(piece);
-  if (commandBuff?.attack > 0) {
-    damage += commandBuff.attack;
-    commandBuff.attack = 0;
-    clearEmptyCommandBuff(piece.id);
-  }
-  if (state.steadyShot[piece.side] === piece.id) {
-    damage += 1;
-    state.steadyShot[piece.side] = null;
-  }
+  if (!options.skipRecord) recordShot(piece.side, x, y);
 
   if (state.currentAffectedPieceId === piece.id && Math.random() >= 0.5) {
     addLog(`${attackerDescription(piece)} fired from Shifting Currents and the shot drifted wide.`);
@@ -1020,6 +1051,23 @@ function performShot(piece, x, y, options = {}) {
     state.lastSuccessfulHit = null;
     if (finish) finishAction();
     return false;
+  }
+
+  if (options.allowReaction !== false && startIncomingShotReaction(piece, target, x, y, options)) {
+    render();
+    return false;
+  }
+
+  let damage = (options.damage ?? 1) + state.attackBonus[piece.side];
+  const commandBuff = commandBuffFor(piece);
+  if (commandBuff?.attack > 0) {
+    damage += commandBuff.attack;
+    commandBuff.attack = 0;
+    clearEmptyCommandBuff(piece.id);
+  }
+  if (state.steadyShot[piece.side] === piece.id) {
+    damage += 1;
+    state.steadyShot[piece.side] = null;
   }
 
   state.contacts[piece.side].add(key(x, y));
@@ -1058,12 +1106,13 @@ function handleSpecialClick(x, y) {
   const piece = specialPiece();
   if (!piece) return;
   if (state.specialMode === "evasiveRoll") {
-    if (Math.abs(piece.x - x) === 1 && Math.abs(piece.y - y) === 1 && !pieceAt(x, y)) {
+    if (squareInList(x, y, evasiveRollTargets(piece))) {
       piece.x = x;
       piece.y = y;
       addLog(`${attackerDescription(piece)} used Evasive Roll to dodge to ${coord(x, y)}.`);
       clearSpecialMode();
       if (state.reaction?.cardPlayed) {
+        state.reaction.cancelIncomingShot = state.reaction.pending === "incomingShot";
         completeReactionWindow();
         return;
       }
@@ -1277,9 +1326,7 @@ function specialTargets() {
   const piece = specialPiece();
   if (!piece || !state.specialMode) return [];
   if (state.specialMode === "evasiveRoll") {
-    return getDirectionalSteps("diagonal", piece.side)
-      .map(([dx, dy]) => ({ x: piece.x + dx, y: piece.y + dy }))
-      .filter((sq) => isInside(sq.x, sq.y) && !pieceAt(sq.x, sq.y));
+    return evasiveRollTargets(piece);
   }
   if (state.specialMode === "royalCommand") {
     const picks = state.specialData?.picks || [];
@@ -1667,6 +1714,43 @@ function hasInstantCard(side) {
   return state.hands[side]?.some((card) => card.phase === "Instant");
 }
 
+function hasEvasiveRoll(side) {
+  return state.hands[side]?.some((card) => card.type === "evasiveRoll");
+}
+
+function evasiveRollTargets(piece) {
+  if (!piece) return [];
+  return getDirectionalSteps("diagonal", piece.side)
+    .map(([dx, dy]) => ({ x: piece.x + dx, y: piece.y + dy }))
+    .filter((sq) => isInside(sq.x, sq.y) && !pieceAt(sq.x, sq.y));
+}
+
+function startIncomingShotReaction(shooter, target, x, y, options = {}) {
+  if (state.gameOver || state.reaction || !hasEvasiveRoll(target.side) || !evasiveRollTargets(target).length) return false;
+  state.reaction = {
+    side: target.side,
+    pending: "incomingShot",
+    message: "before the incoming shot resolves",
+    cardPlayed: false,
+    resumeSelectedId: state.selectedId,
+    targetId: target.id,
+    shot: {
+      shooterId: shooter.id,
+      x,
+      y,
+      options: {
+        damage: options.damage,
+        finish: options.finish,
+        skipRecord: true,
+        allowReaction: false,
+      },
+    },
+  };
+  state.selectedId = target.id;
+  addLog(`${playerName(target.side)} may use Evasive Roll or pass before the incoming shot resolves.`);
+  return true;
+}
+
 function startReactionWindow(pending, message) {
   if (state.gameOver || state.reaction) return false;
   const side = enemyOf(state.active);
@@ -1694,6 +1778,23 @@ function completeReactionWindow() {
   if (!reaction) return;
   state.reaction = null;
   clearSpecialMode();
+  if (reaction.pending === "incomingShot") {
+    const shot = reaction.shot;
+    const shooter = state.pieces.find((piece) => piece.id === shot?.shooterId);
+    if (reaction.cancelIncomingShot) {
+      state.selectedId = reaction.resumeSelectedId;
+      state.lastSuccessfulHit = null;
+      addLog("The incoming shot missed after Evasive Roll.");
+      if (shot?.options?.finish !== false && shooter) clearActionModifiers(shooter.side);
+      if (shot?.options?.finish !== false) finishAction();
+      else render();
+      return;
+    }
+    state.selectedId = reaction.resumeSelectedId;
+    if (shooter && shot) performShot(shooter, shot.x, shot.y, shot.options || { allowReaction: false, skipRecord: true });
+    else render();
+    return;
+  }
   if (reaction.pending === "actionPhase") {
     state.phase = "action";
     state.selectedId = state.movedPieceId || reaction.resumeSelectedId;
@@ -1744,6 +1845,7 @@ function endTurn(force = false) {
   if (state.reaction) return;
   if (state.phase === "setup") return lockSetup();
   if (state.phase === "currentSetup") return;
+  if (state.phase === "currentShift") return;
   if (!force && (state.phase === "move" || state.phase === "commandMove") && state.movedPieceId) return beginTargetingPhase();
   if (!force && state.phase === "action" && state.turn > 2 && !state.actionTaken) return;
   if (startReactionWindow("turnEnd", "before the turn ends")) {
@@ -1767,7 +1869,7 @@ function beginTargetingPhase() {
 }
 
 function completeEndTurn() {
-  resolvePendingCurrentShift();
+  if (resolvePendingCurrentShift()) return;
   clearTurnModifiers(state.active);
   if (state.passAbilityCooldown[state.active] > 0) state.passAbilityCooldown[state.active] -= 1;
   state.active = enemyOf(state.active);
@@ -1828,16 +1930,31 @@ function tickTimedStatus(statuses, side, expire) {
 }
 
 function resolvePendingCurrentShift() {
-  if (!state.pendingCurrentShifts.length) return;
-  for (const current of state.pendingCurrentShifts) {
+  while (state.pendingCurrentShifts.length) {
+    const currentRef = state.pendingCurrentShifts.shift();
+    const currentId = typeof currentRef === "string" ? currentRef : currentRef?.id;
+    const current = state.currents.find((candidate) => candidate.id === currentId);
+    if (!current) continue;
     if (Math.random() < 0.5) {
       addLog(`${playerName(current.side)} rolled to shift Shifting Currents, but it stayed in place.`);
     } else {
-      addLog(`${playerName(current.side)} shifted Shifting Currents.`);
-      shiftCurrent(current);
+      const targets = currentShiftTargets(current);
+      if (!targets.length) {
+        addLog(`${playerName(current.side)} rolled to shift Shifting Currents, but no legal locations were available.`);
+        continue;
+      }
+      state.currentShift = { currentId: current.id, side: current.side, toastKey: `${Date.now()}:${current.id}` };
+      state.phase = "currentShift";
+      state.setupSide = current.side;
+      state.selectedId = null;
+      addLog(`${playerName(current.side)} may move Shifting Currents up to 3 squares in any direction.`);
+      render();
+      return true;
     }
   }
+  state.currentShift = null;
   state.pendingCurrentShifts = [];
+  return false;
 }
 
 function lockSetup() {
@@ -1921,7 +2038,7 @@ function resupply() {
 }
 
 function surrenderGame() {
-  if (state.gameOver || state.phase === "setup" || state.phase === "currentSetup") return;
+  if (state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift") return;
   state.winner = enemyOf(state.active);
   state.gameOver = true;
   addLog(`Game Over. ${playerName(state.active)} surrendered. ${playerName(state.winner)} wins.`);
@@ -1930,7 +2047,7 @@ function surrenderGame() {
 
 function playCard(instanceId) {
   if (!canUseActiveTurn()) return;
-  if (state.phase === "setup" || state.phase === "currentSetup" || state.gameOver) return;
+  if (state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift" || state.gameOver) return;
   const actorSide = state.reaction?.side || state.active;
   const hand = state.hands[actorSide];
   const card = hand.find((candidate) => candidate.instanceId === instanceId);
@@ -1950,6 +2067,9 @@ function playCard(instanceId) {
 
 function canPlayCard(card, piece, actorSide = state.active) {
   if (state.lastStandLocks[actorSide]) return false;
+  if (state.reaction?.pending === "incomingShot") {
+    return card.type === "evasiveRoll" && piece?.id === state.reaction.targetId && evasiveRollTargets(piece).length > 0;
+  }
   if (card.type === "overcharge") {
     return (
       state.phase === "action" &&
@@ -2248,6 +2368,7 @@ function phaseText() {
   if (state.reaction) return "Instant Response";
   if (state.phase === "setup") return "Deployment";
   if (state.phase === "currentSetup") return "Current Placement";
+  if (state.phase === "currentShift") return "Current Shift";
   if (state.phase === "commandMove") return "Command Move";
   return state.phase === "move" ? "Movement Phase" : "Targeting / Action Phase";
 }
@@ -2259,6 +2380,7 @@ function render() {
     ? gameOverText()
     : statusText();
   maybeShowInitiativeToast();
+  maybeShowCurrentShiftToast();
   maybeShowTurnToast();
   renderGameOverBanner();
 
@@ -2284,10 +2406,24 @@ function maybeShowInitiativeToast() {
   }, 3000);
 }
 
+function maybeShowCurrentShiftToast() {
+  if (!isMultiplayer || isSpectator || state.gameOver || !initiativeToastEl || state.phase !== "currentShift" || !state.currentShift) return;
+  if (multiplayerSeat.color !== state.currentShift.side) return;
+  const key = state.currentShift.toastKey;
+  if (multiplayerSync.lastInitiativeToastKey === key) return;
+  multiplayerSync.lastInitiativeToastKey = key;
+  initiativeToastEl.textContent = "Move your Shifting Currents";
+  initiativeToastEl.hidden = false;
+  window.clearTimeout(multiplayerSync.initiativeToastTimer);
+  multiplayerSync.initiativeToastTimer = window.setTimeout(() => {
+    initiativeToastEl.hidden = true;
+  }, 3000);
+}
+
 function maybeShowTurnToast() {
   if (!isMultiplayer || isSpectator || state.gameOver || !turnToastEl) return;
   if (state.active !== multiplayerSeat.color) return;
-  if (state.phase === "setup" || state.phase === "currentSetup") return;
+  if (state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift") return;
   const key = `${state.turn}:${state.active}`;
   if (multiplayerSync.lastTurnToastKey === key) return;
   multiplayerSync.lastTurnToastKey = key;
@@ -2331,6 +2467,10 @@ function statusText() {
     if (isMultiplayer && state.setupSide !== viewSide()) return "Opponent is placing Shifting Currents. Location is hidden.";
     return `${playerName(state.setupSide)} places a 3x3 Shifting Currents zone inside the first 6 rows closest to that fleet.`;
   }
+  if (state.phase === "currentShift") {
+    if (isMultiplayer && state.setupSide !== viewSide()) return `${playerName(state.setupSide)} is moving Shifting Currents.`;
+    return `${playerName(state.setupSide)} may move Shifting Currents exactly 3 squares in any direction.`;
+  }
   if (state.phase === "commandMove") return `Turn ${state.turn}. Move the ordered ship, then take its action.`;
   if (state.phase === "move" && state.movedPieceId) return `Turn ${state.turn}. Movement complete. Play Movement Phase cards or begin Targeting.`;
   if (state.phase === "move") return `Turn ${state.turn}. Move one ship, issue a King command, or play a Movement Phase card.`;
@@ -2350,6 +2490,7 @@ function renderBoard() {
   const mineTargets = canPreviewRanges && !state.actionTaken && state.phase === "action" && moved?.side === viewer && state.actionMode === "mine" ? legalMineSquares() : [];
   const specialSquares = canPreviewRanges ? specialTargets() : [];
   const commandSquares = canPreviewRanges ? commandTargets() : [];
+  const currentShiftSquares = canPreviewRanges && state.phase === "currentShift" && (!isMultiplayer || state.currentShift?.side === viewer) ? currentShiftTargets(activeCurrentShift()) : [];
   const selectedKey = canPreviewRanges && (state.phase !== "setup" || canPreviewSetup) && selected?.side === viewer ? key(selected.x, selected.y) : "";
   const lastKeys = state.lastMove ? [key(state.lastMove.to.x, state.lastMove.to.y)] : [];
 
@@ -2367,6 +2508,7 @@ function renderBoard() {
       if (squareInList(x, y, specialSquares)) cell.classList.add(["evasiveRoll", "royalCommand", "callGuard"].includes(state.specialMode) ? "move" : "target");
       if (squareInList(x, y, actionTargets)) cell.classList.add(state.actionMode === "recon" ? "recon" : "target");
       if (squareInList(x, y, commandSquares)) cell.classList.add("command");
+      if (squareInList(x, y, currentShiftSquares)) cell.classList.add("move");
       const visibleCurrent = visibleCurrentAt(x, y);
       if (visibleCurrent) {
         cell.classList.add("current");
@@ -2477,11 +2619,14 @@ function renderReactionPrompt() {
   const side = state.reaction.side;
   const piece = selectedPiece();
   reactionTitleEl.textContent = `${playerName(side)} Instant Response`;
-  reactionTextEl.textContent = piece?.side === side
+  reactionTextEl.textContent = state.reaction.pending === "incomingShot"
+    ? "Your ship is under fire. Play Evasive Roll to dodge diagonally or pass to take the shot."
+    : piece?.side === side
     ? `Selected: ${PIECES[piece.type].title}. Play an Instant card or pass ${state.reaction.message}.`
     : `Select one of your ships for cards that need a ship, then play an Instant card or pass ${state.reaction.message}.`;
   reactionCardsEl.innerHTML = state.hands[side]
     .filter((card) => card.phase === "Instant")
+    .filter((card) => state.reaction.pending !== "incomingShot" || card.type === "evasiveRoll")
     .map((card) => {
       const playable = piece?.side === side && canPlayCard(card, piece, side);
       return `
@@ -2607,8 +2752,8 @@ function updateButtons() {
   lockSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   randomizeSetupButton.disabled = !canUseTurn || state.phase !== "setup" || (isMultiplayer && !state.gameModeConfirmed);
   resupplyButton.disabled = !canUseTurn || state.phase !== "move" || pieceMovedThisTurn || state.turn < 3 || state.gameOver;
-  surrenderButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup";
-  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || phaseButtonLocked;
+  surrenderButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift";
+  endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift" || phaseButtonLocked;
   reconButton.disabled = reactionOpen || !canUseTurn || !canAct;
   mineButton.disabled = reactionOpen || !canUseTurn || !canAct;
   repairButton.disabled = reactionOpen || !canUseTurn || !canAct || passAbilityLocked || movedPiece()?.type === "pawn" || movedPiece()?.hp >= movedPiece()?.maxHp;
@@ -2627,7 +2772,7 @@ function updateButtons() {
 function canUseActiveTurn() {
   if (state.reaction) return canUseReactionWindow();
   if (isSpectator) return false;
-  return !isMultiplayer || state.active === multiplayerSeat.color || (state.phase === "setup" && state.setupSide === multiplayerSeat.color) || (state.phase === "currentSetup" && state.setupSide === multiplayerSeat.color);
+  return !isMultiplayer || state.active === multiplayerSeat.color || (state.phase === "setup" && state.setupSide === multiplayerSeat.color) || (state.phase === "currentSetup" && state.setupSide === multiplayerSeat.color) || (state.phase === "currentShift" && state.currentShift?.side === multiplayerSeat.color);
 }
 
 function serializeSet(set) {
@@ -2667,7 +2812,8 @@ function serializeGameState() {
     shots: { blue: serializeSet(state.shots.blue), red: serializeSet(state.shots.red) },
     mines: state.mines,
     currents: state.currents.map((current) => ({ ...current, revealedTo: serializeSet(current.revealedTo) })),
-    pendingCurrentShifts: state.pendingCurrentShifts,
+    pendingCurrentShifts: state.pendingCurrentShifts.map((entry) => (typeof entry === "string" ? entry : entry.id)).filter(Boolean),
+    currentShift: state.currentShift,
     currentAffectedPieceId: state.currentAffectedPieceId,
     decks: state.decks,
     hands: state.hands,
@@ -2721,6 +2867,8 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
       red: hydrateSet(sharedState.shots?.red),
     },
     currents: (sharedState.currents || []).map((current) => ({ ...current, revealedTo: hydrateSet(current.revealedTo) })),
+    pendingCurrentShifts: Array.isArray(sharedState.pendingCurrentShifts) ? sharedState.pendingCurrentShifts : [],
+    currentShift: sharedState.currentShift || null,
     counterBattery: hydrateSet(sharedState.counterBattery),
     shielded: hydrateSet(sharedState.shielded),
     timedShields: Array.isArray(sharedState.timedShields) ? sharedState.timedShields : [],
