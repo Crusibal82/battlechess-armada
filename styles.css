@@ -419,6 +419,17 @@ h2 {
   background: rgba(136, 209, 138, 0.75);
 }
 
+.cell.current-shift-target::after {
+  background: rgba(241, 199, 91, 0.2);
+  border: 3px solid rgba(241, 199, 91, 0.98);
+  box-shadow:
+    0 0 0 0.22rem rgba(0, 0, 0, 0.5),
+    0 0 1rem rgba(241, 199, 91, 0.9);
+  height: 76%;
+  width: 76%;
+  z-index: 7;
+}
+
 .cell.target::after {
   border: 3px solid rgba(247, 140, 107, 0.9);
 }
@@ -458,6 +469,38 @@ h2 {
   top: 0.25rem;
   width: 0.52rem;
   z-index: 2;
+}
+
+.recon-result-marker {
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  bottom: 0.2rem;
+  display: flex;
+  font-size: 0.58rem;
+  font-weight: 900;
+  height: 1.25rem;
+  justify-content: center;
+  left: 0.2rem;
+  line-height: 1;
+  position: absolute;
+  width: 1.25rem;
+  z-index: 8;
+}
+
+.recon-result-marker.clear {
+  background: rgba(136, 209, 138, 0.9);
+  color: #061109;
+}
+
+.recon-result-marker.contact {
+  background: rgba(241, 199, 91, 0.94);
+  color: #1d1605;
+}
+
+.recon-result-marker.mine {
+  background: rgba(247, 140, 107, 0.94);
+  color: #1d0803;
 }
 
 .cell.current {
@@ -625,6 +668,22 @@ h2 {
   max-height: 42rem;
   overflow: auto;
   padding-left: 1.2rem;
+}
+
+.battle-log .log-blue {
+  color: #9ccbff;
+}
+
+.battle-log .log-red {
+  color: #ffabab;
+}
+
+.battle-log li:first-child.log-blue {
+  color: #c6e1ff;
+}
+
+.battle-log li:first-child.log-red {
+  color: #ffd0d0;
 }
 
 .sunken-list {
@@ -850,7 +909,7 @@ h2 {
   justify-content: flex-end;
 }
 
-.battle-log li:first-child {
+.battle-log li:first-child:not(.log-blue):not(.log-red) {
   color: var(--text);
 }
 

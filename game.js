@@ -174,6 +174,7 @@ const state = {
   torpedo: { blue: false, red: false },
   contacts: { blue: new Set(), red: new Set() },
   mineContacts: { blue: new Set(), red: new Set() },
+  reconMarks: { blue: null, red: null },
   shots: { blue: new Set(), red: new Set() },
   mines: [],
   currents: [],
@@ -332,6 +333,7 @@ function newGame() {
   state.torpedo = { blue: false, red: false };
   state.contacts = { blue: new Set(), red: new Set() };
   state.mineContacts = { blue: new Set(), red: new Set() };
+  state.reconMarks = { blue: null, red: null };
   state.shots = { blue: new Set(), red: new Set() };
   state.mines = [];
   state.currents = [];
@@ -1074,11 +1076,6 @@ function performShot(piece, x, y, options = {}) {
   const targetHpBefore = target.hp;
   if (state.defensive[target.side]) damage = Math.max(0, damage - 1);
   if (state.armor[target.side]) damage = Math.max(0, damage - 2);
-  if (state.shielded.has(target.id)) {
-    damage = 0;
-    state.shielded.delete(target.id);
-    addLog(`${attackerDescription(target)} ignored the hit with Shielded status.`);
-  }
   const appliedDamage = damagePiece(target, damage, "attack", piece);
   state.lastSuccessfulHit = appliedDamage > 0 ? { side: piece.side, pieceId: piece.id, x, y } : null;
   const targetName = target.revealedTo.has(piece.side) ? attackerDescription(target) : `${playerName(target.side)} hidden ship`;
@@ -1645,11 +1642,14 @@ function reconSquare(piece, x, y) {
   const mine = mineAt(x, y);
   if (target && target.side !== piece.side) {
     state.contacts[piece.side].add(key(x, y));
+    state.reconMarks[piece.side] = { x, y, result: "contact" };
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: occupied by an enemy contact.`);
   } else if (mine && mine.side !== piece.side) {
     state.mineContacts[piece.side].add(key(x, y));
+    state.reconMarks[piece.side] = { x, y, result: "mine" };
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: mine detected.`);
   } else {
+    state.reconMarks[piece.side] = { x, y, result: "clear" };
     addLog(`${playerName(piece.side)} recon at ${coord(x, y)}: clear water.`);
   }
   clearActionModifiers(piece.side);
@@ -2254,6 +2254,12 @@ function damagePiece(piece, amount, source, sourcePiece = null) {
     addLog(`${attackerDescription(piece)} ignored damage from ${source}.`);
     return 0;
   }
+  if (amount > 0 && state.shielded.has(piece.id)) {
+    state.shielded.delete(piece.id);
+    state.timedShields = state.timedShields.filter((status) => status.pieceId !== piece.id);
+    addLog(`${attackerDescription(piece)} ignored the first damage with Defensive Muster.`);
+    return 0;
+  }
   const commandBuff = commandBuffFor(piece);
   if (amount > 0 && commandBuff?.shield > 0) {
     const blocked = Math.min(amount, commandBuff.shield);
@@ -2491,6 +2497,7 @@ function renderBoard() {
   const specialSquares = canPreviewRanges ? specialTargets() : [];
   const commandSquares = canPreviewRanges ? commandTargets() : [];
   const currentShiftSquares = canPreviewRanges && state.phase === "currentShift" && (!isMultiplayer || state.currentShift?.side === viewer) ? currentShiftTargets(activeCurrentShift()) : [];
+  const reconMark = state.reconMarks?.[viewer] || null;
   const selectedKey = canPreviewRanges && (state.phase !== "setup" || canPreviewSetup) && selected?.side === viewer ? key(selected.x, selected.y) : "";
   const lastKeys = state.lastMove ? [key(state.lastMove.to.x, state.lastMove.to.y)] : [];
 
@@ -2508,7 +2515,7 @@ function renderBoard() {
       if (squareInList(x, y, specialSquares)) cell.classList.add(["evasiveRoll", "royalCommand", "callGuard"].includes(state.specialMode) ? "move" : "target");
       if (squareInList(x, y, actionTargets)) cell.classList.add(state.actionMode === "recon" ? "recon" : "target");
       if (squareInList(x, y, commandSquares)) cell.classList.add("command");
-      if (squareInList(x, y, currentShiftSquares)) cell.classList.add("move");
+      if (squareInList(x, y, currentShiftSquares)) cell.classList.add("move", "current-shift-target");
       const visibleCurrent = visibleCurrentAt(x, y);
       if (visibleCurrent) {
         cell.classList.add("current");
@@ -2547,6 +2554,14 @@ function renderBoard() {
         shot.className = "shot-marker";
         shot.title = "Opponent fired at this coordinate";
         cell.append(shot);
+      }
+
+      if (reconMark && reconMark.x === x && reconMark.y === y) {
+        const marker = document.createElement("span");
+        marker.className = `recon-result-marker ${reconMark.result}`;
+        marker.textContent = reconMark.result === "clear" ? "OK" : reconMark.result === "contact" ? "?" : "!";
+        marker.title = `Recon result: ${reconMark.result === "contact" ? "enemy contact" : reconMark.result}`;
+        cell.append(marker);
       }
 
       cell.ariaLabel = coord(x, y);
@@ -2682,9 +2697,41 @@ function renderLog() {
   battleLogEl.replaceChildren();
   for (const entry of [...state.log].reverse()) {
     const item = document.createElement("li");
-    item.textContent = visibleLogEntry(entry);
+    const visibleEntry = visibleLogEntry(entry);
+    item.textContent = visibleEntry;
+    item.className = logEntryClass(visibleEntry);
     battleLogEl.append(item);
   }
+}
+
+function logEntryClass(entry) {
+  const side = logEntrySide(entry);
+  return ["log-entry", side ? `log-${side}` : ""].filter(Boolean).join(" ");
+}
+
+function logEntrySide(entry) {
+  for (const side of ["blue", "red"]) {
+    const name = playerName(side);
+    if (
+      entry.includes(` hit ${name} `) ||
+      entry.includes(` hit ${name} hidden ship`) ||
+      entry.startsWith(`${name} ship was destroyed`) ||
+      (entry.startsWith(`${name} `) && entry.includes(" was destroyed"))
+    ) {
+      return side;
+    }
+  }
+  for (const side of ["blue", "red"]) {
+    const name = playerName(side);
+    if (
+      entry.startsWith(`${name} moved to `) ||
+      entry.startsWith(`${name} fired on `) ||
+      (entry.startsWith(`${name} `) && (entry.includes(" fired ") || entry.includes(" fired from ")))
+    ) {
+      return side;
+    }
+  }
+  return "";
 }
 
 function visibleLogEntry(entry) {
@@ -2809,6 +2856,7 @@ function serializeGameState() {
     torpedo: state.torpedo,
     contacts: { blue: serializeSet(state.contacts.blue), red: serializeSet(state.contacts.red) },
     mineContacts: { blue: serializeSet(state.mineContacts.blue), red: serializeSet(state.mineContacts.red) },
+    reconMarks: state.reconMarks,
     shots: { blue: serializeSet(state.shots.blue), red: serializeSet(state.shots.red) },
     mines: state.mines,
     currents: state.currents.map((current) => ({ ...current, revealedTo: serializeSet(current.revealedTo) })),
@@ -2862,6 +2910,7 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
       blue: hydrateSet(sharedState.mineContacts?.blue),
       red: hydrateSet(sharedState.mineContacts?.red),
     },
+    reconMarks: sharedState.reconMarks || { blue: null, red: null },
     shots: {
       blue: hydrateSet(sharedState.shots?.blue),
       red: hydrateSet(sharedState.shots?.red),
