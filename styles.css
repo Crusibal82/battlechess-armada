@@ -70,6 +70,37 @@ button:disabled {
   opacity: 0.45;
 }
 
+@keyframes attentionPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(241, 199, 91, 0);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 1rem rgba(241, 199, 91, 0.78);
+    transform: scale(1.025);
+  }
+}
+
+@keyframes cellHintPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+button.attention-pulse:not(:disabled) {
+  animation: attentionPulse 1.35s ease-in-out infinite;
+  border-color: var(--gold);
+}
+
 .app-shell {
   width: min(1680px, calc(100vw - 2rem));
   margin: 0 auto;
@@ -416,6 +447,7 @@ h2 {
 }
 
 .cell.move::after {
+  animation: cellHintPulse 1.25s ease-in-out infinite;
   background: rgba(136, 209, 138, 0.75);
 }
 
@@ -431,6 +463,7 @@ h2 {
 }
 
 .cell.target::after {
+  animation: cellHintPulse 1.25s ease-in-out infinite;
   border: 3px solid rgba(247, 140, 107, 0.9);
 }
 

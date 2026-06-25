@@ -329,7 +329,7 @@ const TUTORIAL_STEPS = [
   },
   {
     title: "React to Surprises",
-    text: "Special Action cards, mines, Shifting Currents, Evasive Roll, and Command Orders can change a turn. Watch phase prompts before ending your turn.",
+    text: "Special Action cards, mines, Shifting Currents, Evasive Roll, and Command Orders can change a turn. For more rule details, use the Rules button to open the searchable rule book.",
     visual: "cards",
   },
 ];
@@ -2854,6 +2854,7 @@ function updateButtons() {
   resupplyButton.disabled = !canUseTurn || state.phase !== "move" || pieceMovedThisTurn || state.turn < 3 || state.gameOver;
   surrenderButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift";
   endTurnButton.disabled = reactionOpen || !canUseTurn || state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift" || phaseButtonLocked;
+  endTurnButton.classList.toggle("attention-pulse", !endTurnButton.disabled && canUseTurn && (state.movedPieceId || state.actionTaken || state.turn <= 2 || state.phase === "action"));
   reconButton.disabled = reactionOpen || !canUseTurn || !canAct;
   mineButton.disabled = reactionOpen || !canUseTurn || !canAct;
   repairButton.disabled = reactionOpen || !canUseTurn || !canAct || passAbilityLocked || movedPiece()?.type === "pawn" || movedPiece()?.hp >= movedPiece()?.maxHp;
@@ -3254,22 +3255,8 @@ async function leaveLobbyFromGame() {
   window.location.href = "/multiplayer.html";
 }
 
-async function openRules() {
-  rulesContentEl.innerHTML = `<div class="rules-loading">Loading rules...</div>`;
-  rulesDialog.showModal();
-  try {
-    const response = await fetch("assets/rules-reference.html");
-    if (!response.ok) throw new Error("Rules reference unavailable.");
-    rulesContentEl.innerHTML = await response.text();
-  } catch {
-    rulesContentEl.innerHTML = `
-      <article class="rules-reference">
-        <h1>Battlechess Armada Rules</h1>
-        <p>The readable rules reference could not be loaded.</p>
-        <p><a href="assets/battlechess-armada-rules.pdf" target="_blank" rel="noopener">Open the rule book PDF</a></p>
-      </article>
-    `;
-  }
+function openRules() {
+  window.open("assets/battlechess-armada-rules.pdf", "_blank", "noopener");
 }
 
 function closeRules() {
