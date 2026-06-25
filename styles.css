@@ -820,6 +820,166 @@ h2 {
   padding: 0.45rem;
 }
 
+.tutorial-dialog {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  padding: 0;
+  width: min(92vw, 860px);
+}
+
+.tutorial-dialog::backdrop {
+  background: rgba(4, 8, 12, 0.72);
+}
+
+.tutorial-modal {
+  background: rgba(27, 34, 41, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.4);
+  display: grid;
+  gap: 0.9rem;
+  overflow: hidden;
+  padding: 0.9rem;
+}
+
+.tutorial-header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.tutorial-header strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.tutorial-screen {
+  background:
+    linear-gradient(135deg, rgba(88, 168, 255, 0.14), transparent 42%),
+    rgba(7, 12, 16, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(16rem, 1.25fr) minmax(14rem, 0.9fr);
+  min-height: 20rem;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.tutorial-visual {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(22, 61, 77, 0.98), rgba(13, 36, 48, 0.98));
+  background-size: 2.6rem 2.6rem, 2.6rem 2.6rem, auto;
+  border: 1px solid rgba(109, 224, 224, 0.34);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  min-height: 18rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.tutorial-visual::before,
+.tutorial-visual::after {
+  border-radius: 999px;
+  content: "";
+  position: absolute;
+}
+
+.tutorial-visual::before {
+  background: var(--blue);
+  box-shadow:
+    4.8rem 2.7rem 0 var(--blue),
+    9rem 6.6rem 0 var(--blue),
+    13rem 3.6rem 0 var(--red),
+    16rem 8.6rem 0 var(--red);
+  height: 1.7rem;
+  left: 18%;
+  top: 22%;
+  width: 1.7rem;
+}
+
+.tutorial-visual::after {
+  border: 3px solid var(--gold);
+  height: 7rem;
+  opacity: 0.9;
+  right: 18%;
+  top: 31%;
+  width: 7rem;
+}
+
+.tutorial-visual.move::after {
+  border-color: var(--move);
+  border-radius: 8px;
+  height: 0;
+  right: 23%;
+  top: 48%;
+  transform: rotate(-35deg);
+  width: 11rem;
+}
+
+.tutorial-visual.target::after,
+.tutorial-visual.cards::after {
+  border-color: var(--target);
+  box-shadow: 0 0 0 0.25rem rgba(247, 140, 107, 0.2);
+}
+
+.tutorial-visual.fog::before {
+  filter: blur(1px);
+  opacity: 0.42;
+}
+
+.tutorial-visual.deploy::after,
+.tutorial-visual.objective::after {
+  border-color: var(--blue);
+}
+
+.tutorial-copy {
+  align-content: center;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tutorial-copy h2 {
+  color: var(--gold);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  margin: 0;
+  text-transform: none;
+}
+
+.tutorial-copy p {
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+.tutorial-progress {
+  background: rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  height: 0.55rem;
+  overflow: hidden;
+}
+
+.tutorial-progress span {
+  background: linear-gradient(90deg, var(--blue), var(--gold));
+  display: block;
+  height: 100%;
+  transition: width 0.25s ease;
+  width: 14%;
+}
+
+.tutorial-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
 .reaction-dialog {
   background: transparent;
   border: 0;
@@ -1139,6 +1299,19 @@ button.active {
 
   .chat-form {
     grid-template-columns: 1fr;
+  }
+
+  .tutorial-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .tutorial-visual {
+    min-height: 13rem;
+  }
+
+  .tutorial-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #leaveLobbyButton:not([hidden]) {

@@ -245,11 +245,22 @@ const chatPanel = document.querySelector("#chatPanel");
 const chatMessagesEl = document.querySelector("#chatMessages");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
+const tutorialButton = document.querySelector("#tutorialButton");
 const rulesButton = document.querySelector("#rulesButton");
 const bugReportButton = document.querySelector("#bugReportButton");
 const rulesDialog = document.querySelector("#rulesDialog");
 const closeRulesButton = document.querySelector("#closeRulesButton");
 const rulesContentEl = document.querySelector("#rulesContent");
+const tutorialDialog = document.querySelector("#tutorialDialog");
+const closeTutorialButton = document.querySelector("#closeTutorialButton");
+const tutorialVisualEl = document.querySelector("#tutorialVisual");
+const tutorialStepCountEl = document.querySelector("#tutorialStepCount");
+const tutorialTitleEl = document.querySelector("#tutorialTitle");
+const tutorialTextEl = document.querySelector("#tutorialText");
+const tutorialProgressBar = document.querySelector("#tutorialProgressBar");
+const tutorialBackButton = document.querySelector("#tutorialBackButton");
+const tutorialPlayButton = document.querySelector("#tutorialPlayButton");
+const tutorialNextButton = document.querySelector("#tutorialNextButton");
 const reactionDialog = document.querySelector("#reactionDialog");
 const reactionTitleEl = document.querySelector("#reactionTitle");
 const reactionTextEl = document.querySelector("#reactionText");
@@ -285,6 +296,48 @@ const multiplayerSeat = {
 const isMultiplayer = Boolean(multiplayerSeat.lobbyId && multiplayerSeat.color && multiplayerSeat.token);
 const isSpectator = isMultiplayer && multiplayerSeat.color === "spectator";
 const isAdminSpectator = isSpectator && (multiplayerSeat.user?.isAdmin || String(multiplayerSeat.user?.username || "").toLowerCase() === "bcaadmincrusibal");
+const TUTORIAL_STEPS = [
+  {
+    title: "Command Your Fleet",
+    text: "Battlechess Armada is a hidden-movement naval duel. Each admiral sees their own fleet and uses deduction to locate the enemy.",
+    visual: "fleet",
+  },
+  {
+    title: "Win the Battle",
+    text: "In Classic mode, sink the enemy King Flagship. Optional modes can require destroying the King and Queen, all pawns, or the entire fleet.",
+    visual: "objective",
+  },
+  {
+    title: "Deploy in Secret",
+    text: "Place ships in your legal setup rows, then place Shifting Currents in your near waters. Your opponent should not see those locations.",
+    visual: "deploy",
+  },
+  {
+    title: "Move One Ship",
+    text: "On your turn, move one ship using its chess-style movement pattern. After moving, you can play Movement Phase cards before targeting.",
+    visual: "move",
+  },
+  {
+    title: "Target, Recon, or Mine",
+    text: "During Targeting Phase, fire at a coordinate, recon a square, deploy a mine on your traveled path, or use a targeting card.",
+    visual: "target",
+  },
+  {
+    title: "Use Fog of War",
+    text: "Enemy ships stay hidden until revealed by movement contact, ramming, recon, card effects, or other mechanics. The battle log helps track clues.",
+    visual: "fog",
+  },
+  {
+    title: "React to Surprises",
+    text: "Special Action cards, mines, Shifting Currents, Evasive Roll, and Command Orders can change a turn. Watch phase prompts before ending your turn.",
+    visual: "cards",
+  },
+];
+const tutorialState = {
+  index: 0,
+  playing: false,
+  timer: null,
+};
 const multiplayerSync = {
   version: 0,
   ready: !isMultiplayer,
@@ -3091,6 +3144,74 @@ async function sendLobbyChat(event) {
   if (response.ok) pollLobbyChat();
 }
 
+function openTutorial() {
+  tutorialState.index = 0;
+  tutorialState.playing = true;
+  renderTutorialStep();
+  tutorialDialog.showModal();
+  scheduleTutorialStep();
+}
+
+function closeTutorial() {
+  stopTutorialPlayback();
+  tutorialDialog.close();
+}
+
+function stopTutorialPlayback() {
+  tutorialState.playing = false;
+  window.clearTimeout(tutorialState.timer);
+  tutorialPlayButton.textContent = "Play";
+}
+
+function scheduleTutorialStep() {
+  window.clearTimeout(tutorialState.timer);
+  if (!tutorialState.playing) return;
+  tutorialPlayButton.textContent = "Pause";
+  tutorialState.timer = window.setTimeout(() => {
+    if (tutorialState.index >= TUTORIAL_STEPS.length - 1) {
+      stopTutorialPlayback();
+      return;
+    }
+    tutorialState.index += 1;
+    renderTutorialStep();
+    scheduleTutorialStep();
+  }, 5200);
+}
+
+function renderTutorialStep() {
+  const step = TUTORIAL_STEPS[tutorialState.index];
+  tutorialStepCountEl.textContent = `Step ${tutorialState.index + 1} of ${TUTORIAL_STEPS.length}`;
+  tutorialTitleEl.textContent = step.title;
+  tutorialTextEl.textContent = step.text;
+  tutorialVisualEl.className = `tutorial-visual ${step.visual}`;
+  tutorialProgressBar.style.width = `${((tutorialState.index + 1) / TUTORIAL_STEPS.length) * 100}%`;
+  tutorialBackButton.disabled = tutorialState.index === 0;
+  tutorialNextButton.textContent = tutorialState.index === TUTORIAL_STEPS.length - 1 ? "Finish" : "Next";
+}
+
+function nextTutorialStep() {
+  if (tutorialState.index >= TUTORIAL_STEPS.length - 1) {
+    closeTutorial();
+    return;
+  }
+  tutorialState.index += 1;
+  renderTutorialStep();
+  scheduleTutorialStep();
+}
+
+function previousTutorialStep() {
+  if (tutorialState.index <= 0) return;
+  tutorialState.index -= 1;
+  renderTutorialStep();
+  scheduleTutorialStep();
+}
+
+function toggleTutorialPlayback() {
+  tutorialState.playing = !tutorialState.playing;
+  if (tutorialState.playing) scheduleTutorialStep();
+  else stopTutorialPlayback();
+}
+
 function openBugReport() {
   if (!isMultiplayer || isSpectator) return;
   bugReportTitle.value = "";
@@ -3181,6 +3302,7 @@ randomizeSetupButton.addEventListener("click", randomizeDeployment);
 resupplyButton.addEventListener("click", resupply);
 surrenderButton.addEventListener("click", surrenderGame);
 leaveLobbyButton.addEventListener("click", () => leaveLobbyFromGame().catch((error) => addLog(error.message)));
+tutorialButton.addEventListener("click", openTutorial);
 rulesButton.addEventListener("click", openRules);
 bugReportButton.addEventListener("click", openBugReport);
 bugReportForm.addEventListener("submit", (event) => submitBugReport(event).catch((error) => addLog(error.message)));
@@ -3188,6 +3310,13 @@ cancelBugReportButton.addEventListener("click", () => bugReportDialog.close());
 closeRulesButton.addEventListener("click", closeRules);
 rulesDialog.addEventListener("click", (event) => {
   if (event.target === rulesDialog) closeRules();
+});
+closeTutorialButton.addEventListener("click", closeTutorial);
+tutorialBackButton.addEventListener("click", previousTutorialStep);
+tutorialPlayButton.addEventListener("click", toggleTutorialPlayback);
+tutorialNextButton.addEventListener("click", nextTutorialStep);
+tutorialDialog.addEventListener("click", (event) => {
+  if (event.target === tutorialDialog) closeTutorial();
 });
 reactionPassButton.addEventListener("click", passReactionWindow);
 gameModeSelect.addEventListener("change", proposeGameMode);
