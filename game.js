@@ -527,7 +527,25 @@ function tone(frequency, duration = 0.12, type = "sine", delay = 0, volume = 0.0
   oscillator.stop(start + duration + 0.02);
 }
 
-function noise(duration = 0.14, delay = 0, volume = 0.08) {
+function sweep(startFrequency, endFrequency, duration = 0.2, type = "sine", delay = 0, volume = 0.08) {
+  const context = audioContext();
+  if (!context) return;
+  const start = context.currentTime + delay;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(startFrequency, start);
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function noise(duration = 0.14, delay = 0, volume = 0.08, filterType = "lowpass", frequency = 900) {
   const context = audioContext();
   if (!context) return;
   const start = context.currentTime + delay;
@@ -535,11 +553,16 @@ function noise(duration = 0.14, delay = 0, volume = 0.08) {
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
   const source = context.createBufferSource();
+  const filter = context.createBiquadFilter();
   const gain = context.createGain();
   source.buffer = buffer;
+  filter.type = filterType;
+  filter.frequency.setValueAtTime(frequency, start);
+  filter.Q.setValueAtTime(0.8, start);
   gain.gain.setValueAtTime(volume, start);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  source.connect(gain);
+  source.connect(filter);
+  filter.connect(gain);
   gain.connect(context.destination);
   source.start(start);
 }
@@ -547,20 +570,27 @@ function noise(duration = 0.14, delay = 0, volume = 0.08) {
 function playSoundEffect(type) {
   if (!soundState.enabled) return;
   if (type === "move") {
-    tone(180, 0.08, "triangle", 0, 0.045);
-    tone(240, 0.1, "triangle", 0.07, 0.04);
+    tone(660, 0.48, "sine", 0, 0.05);
+    tone(990, 0.38, "sine", 0.005, 0.026);
+    tone(660, 0.48, "sine", 0.42, 0.045);
+    tone(990, 0.38, "sine", 0.425, 0.024);
   } else if (type === "shot") {
-    noise(0.12, 0, 0.06);
-    tone(110, 0.16, "sawtooth", 0, 0.04);
+    noise(0.18, 0, 0.12, "lowpass", 420);
+    sweep(130, 46, 0.26, "sawtooth", 0, 0.085);
+    noise(0.08, 0.02, 0.06, "highpass", 1800);
   } else if (type === "hit") {
-    noise(0.18, 0, 0.09);
-    tone(92, 0.2, "square", 0.02, 0.045);
+    noise(0.34, 0, 0.14, "lowpass", 760);
+    sweep(90, 28, 0.42, "sawtooth", 0.01, 0.09);
+    noise(0.12, 0.05, 0.08, "highpass", 2400);
   } else if (type === "miss") {
-    tone(520, 0.07, "sine", 0, 0.035);
-    tone(310, 0.12, "sine", 0.08, 0.025);
+    noise(0.36, 0, 0.09, "bandpass", 1050);
+    noise(0.22, 0.1, 0.055, "highpass", 2500);
+    sweep(440, 220, 0.18, "sine", 0.04, 0.025);
   } else if (type === "destroyed") {
-    noise(0.28, 0, 0.11);
-    tone(80, 0.32, "sawtooth", 0.04, 0.055);
+    noise(0.28, 0, 0.12, "lowpass", 560);
+    sweep(140, 34, 1.15, "sawtooth", 0.05, 0.07);
+    tone(58, 0.55, "triangle", 0.45, 0.05);
+    noise(0.62, 0.38, 0.065, "lowpass", 320);
   } else if (type === "toggle") {
     tone(440, 0.08, "sine", 0, 0.035);
     tone(660, 0.1, "sine", 0.08, 0.035);
