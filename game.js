@@ -247,6 +247,7 @@ const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const tutorialButton = document.querySelector("#tutorialButton");
 const rulesButton = document.querySelector("#rulesButton");
+const soundToggleButton = document.querySelector("#soundToggleButton");
 const bugReportButton = document.querySelector("#bugReportButton");
 const rulesDialog = document.querySelector("#rulesDialog");
 const closeRulesButton = document.querySelector("#closeRulesButton");
@@ -337,6 +338,10 @@ const tutorialState = {
   index: 0,
   playing: false,
   timer: null,
+};
+const soundState = {
+  enabled: localStorage.getItem("battlechess-sound") !== "off",
+  context: null,
 };
 const multiplayerSync = {
   version: 0,
@@ -481,6 +486,102 @@ function drawCards(side, count) {
 function addLog(message) {
   state.log.push(message);
   if (state.log.length > 80) state.log.shift();
+  playLogSound(message);
+}
+
+function updateSoundButton() {
+  soundToggleButton.textContent = soundState.enabled ? "Sound On" : "Sound Off";
+  soundToggleButton.classList.toggle("sound-off", !soundState.enabled);
+}
+
+function toggleSound() {
+  soundState.enabled = !soundState.enabled;
+  localStorage.setItem("battlechess-sound", soundState.enabled ? "on" : "off");
+  updateSoundButton();
+  if (soundState.enabled) playSoundEffect("toggle");
+}
+
+function audioContext() {
+  if (!soundState.enabled) return null;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!soundState.context) soundState.context = new AudioContextClass();
+  if (soundState.context.state === "suspended") soundState.context.resume();
+  return soundState.context;
+}
+
+function tone(frequency, duration = 0.12, type = "sine", delay = 0, volume = 0.08) {
+  const context = audioContext();
+  if (!context) return;
+  const start = context.currentTime + delay;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.02);
+}
+
+function noise(duration = 0.14, delay = 0, volume = 0.08) {
+  const context = audioContext();
+  if (!context) return;
+  const start = context.currentTime + delay;
+  const buffer = context.createBuffer(1, context.sampleRate * duration, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  source.buffer = buffer;
+  gain.gain.setValueAtTime(volume, start);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  source.connect(gain);
+  gain.connect(context.destination);
+  source.start(start);
+}
+
+function playSoundEffect(type) {
+  if (!soundState.enabled) return;
+  if (type === "move") {
+    tone(180, 0.08, "triangle", 0, 0.045);
+    tone(240, 0.1, "triangle", 0.07, 0.04);
+  } else if (type === "shot") {
+    noise(0.12, 0, 0.06);
+    tone(110, 0.16, "sawtooth", 0, 0.04);
+  } else if (type === "hit") {
+    noise(0.18, 0, 0.09);
+    tone(92, 0.2, "square", 0.02, 0.045);
+  } else if (type === "miss") {
+    tone(520, 0.07, "sine", 0, 0.035);
+    tone(310, 0.12, "sine", 0.08, 0.025);
+  } else if (type === "destroyed") {
+    noise(0.28, 0, 0.11);
+    tone(80, 0.32, "sawtooth", 0.04, 0.055);
+  } else if (type === "toggle") {
+    tone(440, 0.08, "sine", 0, 0.035);
+    tone(660, 0.1, "sine", 0.08, 0.035);
+  }
+}
+
+function playLogSound(message) {
+  if (!soundState.enabled) return;
+  if (message.includes(" was destroyed")) {
+    playSoundEffect("destroyed");
+  } else if (message.includes(" hit ") || message.includes("detonated a hidden mine") || message.includes("struck a mine")) {
+    playSoundEffect("shot");
+    window.setTimeout(() => playSoundEffect("hit"), 130);
+  } else if (message.includes(" and missed") || message.includes("drifted wide")) {
+    playSoundEffect("shot");
+    window.setTimeout(() => playSoundEffect("miss"), 130);
+  } else if (message.includes(" fired on ") || message.includes(" fired from ")) {
+    playSoundEffect("shot");
+  } else if (message.includes(" moved to ") || message.includes(" drifted ") || message.includes("repositioned") || message.includes("promoted")) {
+    playSoundEffect("move");
+  }
 }
 
 function coord(x, y) {
@@ -2952,6 +3053,8 @@ function serializeGameState() {
 
 function applySharedGameState(sharedState, version = multiplayerSync.version) {
   if (!sharedState) return;
+  const incomingLog = Array.isArray(sharedState.log) ? sharedState.log : [];
+  const newRemoteLogEntries = multiplayerSync.ready ? incomingLog.slice(state.log.length) : [];
   multiplayerSync.applying = true;
   Object.assign(state, {
     ...sharedState,
@@ -3000,6 +3103,7 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
   multiplayerSync.ready = true;
   render();
   multiplayerSync.applying = false;
+  newRemoteLogEntries.forEach(playLogSound);
 }
 
 function multiplayerHeaders() {
@@ -3291,6 +3395,7 @@ surrenderButton.addEventListener("click", surrenderGame);
 leaveLobbyButton.addEventListener("click", () => leaveLobbyFromGame().catch((error) => addLog(error.message)));
 tutorialButton.addEventListener("click", openTutorial);
 rulesButton.addEventListener("click", openRules);
+soundToggleButton.addEventListener("click", toggleSound);
 bugReportButton.addEventListener("click", openBugReport);
 bugReportForm.addEventListener("submit", (event) => submitBugReport(event).catch((error) => addLog(error.message)));
 cancelBugReportButton.addEventListener("click", () => bugReportDialog.close());
@@ -3325,6 +3430,7 @@ defenseButton.addEventListener("click", () => startCommand("defense"));
 
 setupLabels();
 updateGameModeTooltip();
+updateSoundButton();
 if (isMultiplayer) {
   leaveLobbyButton.hidden = false;
   bugReportButton.hidden = isSpectator;
