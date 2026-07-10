@@ -83,6 +83,24 @@ label span {
   gap: 0.25rem;
 }
 
+.community-link {
+  border: 1px solid rgba(88, 168, 255, 0.54);
+  border-radius: 6px;
+  color: #c6e1ff;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  padding: 0.6rem 0.75rem;
+  text-decoration: none;
+}
+
+.community-link:hover,
+.community-link:focus-visible {
+  border-color: var(--blue);
+  color: white;
+  outline: none;
+}
+
 .patch-notes {
   align-content: start;
   display: grid;
