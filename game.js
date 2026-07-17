@@ -149,6 +149,13 @@ const GAME_MODES = {
   },
 };
 
+function initialAiSide() {
+  const value = new URLSearchParams(window.location.search).get("ai");
+  return ["blue", "red"].includes(value) ? value : null;
+}
+
+const initialAiSeat = initialAiSide();
+
 const state = {
   active: "blue",
   turn: 1,
@@ -203,6 +210,8 @@ const state = {
   sunkShips: [],
   playerNames: { blue: null, red: null },
   hostColor: null,
+  aiSide: initialAiSeat,
+  aiEnabled: Boolean(initialAiSeat),
   modeConfirmations: { blue: false, red: false },
   initiativeSide: "blue",
   initiativeToastKey: null,
@@ -358,6 +367,11 @@ const multiplayerSync = {
   initiativeToastTimer: null,
 };
 
+const aiController = {
+  timer: null,
+  running: false,
+};
+
 function setupLabels() {
   document.querySelector("#fileLabels").innerHTML = FILES.map((f) => `<span>${f}</span>`).join("");
   document.querySelector("#bottomFileLabels").innerHTML = FILES.map((f) => `<span>${f}</span>`).join("");
@@ -420,7 +434,10 @@ function newGame() {
   state.sunkShips = [];
   state.playerNames = state.playerNames || { blue: null, red: null };
   state.hostColor = state.hostColor || (isMultiplayer && !isSpectator ? multiplayerSeat.color : "blue");
+  state.aiEnabled = Boolean(state.aiSide);
+  if (state.aiSide) state.playerNames[state.aiSide] = state.playerNames[state.aiSide] || "AI Admiral";
   state.modeConfirmations = isMultiplayer ? { blue: false, red: false } : { blue: true, red: true };
+  if (state.aiEnabled && state.aiSide) state.modeConfirmations[state.aiSide] = true;
   state.initiativeSide = randomSide();
   state.initiativeToastKey = null;
   state.gameMode = gameModeSelect.value;
@@ -448,7 +465,11 @@ function newGame() {
   drawCards("red", 5);
   addLog(`Game mode: ${GAME_MODES[state.gameMode].name}. ${GAME_MODES[state.gameMode].description}`);
   if (isMultiplayer) {
-    addLog(`Admiral Blue proposed ${GAME_MODES[state.gameMode].name}. Admiral Red must confirm the game mode.`);
+    if (state.aiEnabled) {
+      addLog(`${playerName(state.hostColor || multiplayerSeat.color)} proposed ${GAME_MODES[state.gameMode].name}. Confirm to begin solo play against ${playerName(state.aiSide)}.`);
+    } else {
+      addLog(`Admiral Blue proposed ${GAME_MODES[state.gameMode].name}. Admiral Red must confirm the game mode.`);
+    }
     addLog("Deployment begins after game mode confirmation. Admiral Blue may rearrange ships inside rows 1-3, then lock setup.");
     addLog(`Connected as ${playerName(multiplayerSeat.color)}. The board will update when your opponent acts.`);
   } else {
@@ -908,7 +929,12 @@ function isDeploymentSquare(side, type, x, y) {
 
 function randomizeDeployment() {
   if (state.phase !== "setup" || state.gameOver || !canUseActiveTurn()) return;
-  const side = state.setupSide;
+  if (!randomizeDeploymentFor(state.setupSide)) return;
+  addLog(`${playerName(state.setupSide)} randomized deployment within legal setup zones.`);
+  render();
+}
+
+function randomizeDeploymentFor(side) {
   const pieces = state.pieces.filter((piece) => piece.side === side);
   const occupied = new Set(state.pieces.filter((piece) => piece.side !== side).map((piece) => key(piece.x, piece.y)));
   const shuffledPawns = shuffle(deploymentSquaresFor(side, "pawn"));
@@ -921,15 +947,14 @@ function randomizeDeployment() {
   for (const piece of orderedPieces) {
     const pool = piece.type === "pawn" ? shuffledPawns : shuffledNamed;
     const square = takeAvailableSquare(pool, occupied);
-    if (!square) return;
+    if (!square) return false;
     piece.x = square.x;
     piece.y = square.y;
     occupied.add(key(square.x, square.y));
   }
 
   state.selectedId = null;
-  addLog(`${playerName(side)} randomized deployment within legal setup zones.`);
-  render();
+  return true;
 }
 
 function takeAvailableSquare(pool, occupied) {
@@ -1136,7 +1161,7 @@ function activeCurrentShift() {
 
 function handleCurrentShiftClick(x, y) {
   const current = activeCurrentShift();
-  if (!current || (isMultiplayer && state.currentShift?.side !== multiplayerSeat.color)) return;
+  if (!current || (isMultiplayer && state.currentShift?.side !== multiplayerSeat.color && !isAiSide(state.currentShift?.side))) return;
   if (!squareInList(x, y, currentShiftTargets(current))) return;
   current.x = x;
   current.y = y;
@@ -1145,6 +1170,147 @@ function handleCurrentShiftClick(x, y) {
   addLog(`${playerName(current.side)} moved Shifting Currents to ${coord(x, y)}.`);
   state.currentShift = null;
   completeEndTurn();
+}
+
+function lobbyAiSideFromPlayers(players) {
+  if (players?.blue?.ai) return "blue";
+  if (players?.red?.ai) return "red";
+  return null;
+}
+
+function syncAiSeat(players) {
+  const nextAiSide = lobbyAiSideFromPlayers(players);
+  if (!nextAiSide) return;
+  state.aiSide = nextAiSide;
+  state.aiEnabled = true;
+  state.playerNames[nextAiSide] = players[nextAiSide]?.name || "AI Admiral";
+  state.modeConfirmations[nextAiSide] = true;
+}
+
+function isAiSide(side) {
+  return Boolean(state.aiEnabled && state.aiSide && side === state.aiSide);
+}
+
+function scheduleAiTurn() {
+  if (!isMultiplayer || isSpectator || !state.aiEnabled || !state.aiSide || state.gameOver || multiplayerSync.applying) return;
+  window.clearTimeout(aiController.timer);
+  aiController.timer = window.setTimeout(runAiTurn, 700);
+}
+
+function runAiTurn() {
+  if (aiController.running || !state.aiEnabled || !state.aiSide || state.gameOver || multiplayerSync.applying) return;
+  aiController.running = true;
+  try {
+    if (state.reaction) {
+      if (isAiSide(state.reaction.side)) {
+        addLog(`${playerName(state.aiSide)} passed the Instant response.`);
+        completeReactionWindow();
+      }
+      return;
+    }
+    if (isMultiplayer && !state.gameModeConfirmed && (state.phase === "setup" || state.phase === "currentSetup")) return;
+    if (state.phase === "setup" && isAiSide(state.setupSide)) {
+      randomizeDeploymentFor(state.aiSide);
+      addLog(`${playerName(state.aiSide)} deployed its fleet.`);
+      lockSetup();
+      return;
+    }
+    if (state.phase === "currentSetup" && isAiSide(state.setupSide)) {
+      aiPlaceStartingCurrent();
+      return;
+    }
+    if (state.phase === "currentShift" && isAiSide(state.currentShift?.side)) {
+      aiMoveCurrent();
+      return;
+    }
+    if (!isAiSide(state.active)) return;
+    if (state.phase === "move") {
+      aiMovePiece();
+      return;
+    }
+    if (state.phase === "action") {
+      aiTargetOrPass();
+    }
+  } finally {
+    aiController.running = false;
+  }
+}
+
+function randomFrom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function aiPlaceStartingCurrent() {
+  const anchors = [];
+  for (let y = 1; y < BOARD_SIZE - 1; y++) {
+    for (let x = 1; x < BOARD_SIZE - 1; x++) {
+      if (isValidCurrentAnchor(x, y, state.aiSide) && !currentZoneOverlaps(x, y)) anchors.push({ x, y });
+    }
+  }
+  const anchor = randomFrom(anchors);
+  if (!anchor) return;
+  handleCurrentSetupClick(anchor.x, anchor.y);
+}
+
+function aiMoveCurrent() {
+  const current = activeCurrentShift();
+  const targets = currentShiftTargets(current);
+  const target = randomFrom(targets);
+  if (!target) {
+    state.currentShift = null;
+    completeEndTurn();
+    return;
+  }
+  handleCurrentShiftClick(target.x, target.y);
+}
+
+function aiMovablePieces() {
+  return state.pieces
+    .filter((piece) => piece.side === state.aiSide)
+    .map((piece) => ({ piece, squares: legalSquares(piece, "move") }))
+    .filter((entry) => entry.squares.length);
+}
+
+function aiMovePiece() {
+  const entries = aiMovablePieces();
+  if (!entries.length) {
+    addLog(`${playerName(state.aiSide)} had no legal moves.`);
+    endTurn(true);
+    return;
+  }
+  const rammingEntries = entries
+    .map((entry) => ({ ...entry, squares: entry.squares.filter((sq) => pieceAt(sq.x, sq.y)?.side === enemyOf(state.aiSide)) }))
+    .filter((entry) => entry.squares.length);
+  const entry = randomFrom(rammingEntries.length && Math.random() < 0.25 ? rammingEntries : entries);
+  const square = randomFrom(entry.squares);
+  state.selectedId = entry.piece.id;
+  moveSelectedTo(entry.piece, square.x, square.y);
+  if (!state.gameOver && state.phase === "move" && state.movedPieceId && isAiSide(state.active)) {
+    window.setTimeout(() => beginTargetingPhase(), 600);
+  }
+}
+
+function aiTargetOrPass() {
+  const piece = movedPiece();
+  if (!piece || piece.side !== state.aiSide) {
+    endTurn(true);
+    return;
+  }
+  const legal = legalSquares(piece, "target").filter((sq) => !pieceAt(sq.x, sq.y) || pieceAt(sq.x, sq.y).side !== state.aiSide);
+  if (!legal.length || (state.turn <= 2 && Math.random() < 0.25)) {
+    addLog(`${playerName(state.aiSide)} held fire.`);
+    endTurn(true);
+    return;
+  }
+  const knownHits = legal.filter((sq) => state.contacts[state.aiSide]?.has(key(sq.x, sq.y)));
+  const actualEnemy = legal.filter((sq) => pieceAt(sq.x, sq.y)?.side === enemyOf(state.aiSide));
+  const pool = knownHits.length ? knownHits : (actualEnemy.length && Math.random() < 0.35 ? actualEnemy : legal);
+  const target = randomFrom(pool);
+  state.selectedId = piece.id;
+  attackSquare(piece, target.x, target.y);
+  if (!state.gameOver && isAiSide(state.active)) {
+    window.setTimeout(() => endTurn(true), 650);
+  }
 }
 
 function resolveRamming(attacker, defender, from) {
@@ -2582,6 +2748,7 @@ function render() {
   renderLog();
   updateButtons();
   scheduleMultiplayerPublish();
+  scheduleAiTurn();
 }
 
 function maybeShowInitiativeToast() {
@@ -3070,6 +3237,8 @@ function serializeGameState() {
     sunkShips: state.sunkShips,
     playerNames: state.playerNames,
     hostColor: state.hostColor,
+    aiSide: state.aiSide,
+    aiEnabled: state.aiEnabled,
     modeConfirmations: state.modeConfirmations,
     initiativeSide: state.initiativeSide,
     initiativeToastKey: state.initiativeToastKey,
@@ -3117,6 +3286,8 @@ function applySharedGameState(sharedState, version = multiplayerSync.version) {
     sunkShips: Array.isArray(sharedState.sunkShips) ? sharedState.sunkShips : [],
     playerNames: sharedState.playerNames || state.playerNames || { blue: null, red: null },
     hostColor: sharedState.hostColor || state.hostColor || null,
+    aiSide: sharedState.aiSide || state.aiSide || null,
+    aiEnabled: Boolean(sharedState.aiEnabled || state.aiEnabled),
     modeConfirmations: sharedState.modeConfirmations || { blue: false, red: false },
     initiativeSide: sharedState.initiativeSide || "blue",
     initiativeToastKey: sharedState.initiativeToastKey || null,
@@ -3197,6 +3368,7 @@ async function pollSharedGameState() {
         blue: payload.players.blue?.name || state.playerNames.blue,
         red: payload.players.red?.name || state.playerNames.red,
       };
+      syncAiSeat(payload.players);
     }
     if (payload.state && payload.version > multiplayerSync.version) {
       applySharedGameState(payload.state, payload.version);
@@ -3402,6 +3574,7 @@ function proposeGameMode() {
   if (!isMultiplayer || isSpectator || multiplayerSeat.color !== state.hostColor || state.gameOver || state.gameModeConfirmed) return;
   state.gameMode = gameModeSelect.value;
   state.modeConfirmations = { blue: false, red: false };
+  if (state.aiEnabled && state.aiSide) state.modeConfirmations[state.aiSide] = true;
   state.gameModeConfirmed = false;
   addLog(`${playerName(multiplayerSeat.color)} selected ${GAME_MODES[state.gameMode].name}. Both players must confirm.`);
   render();
@@ -3410,6 +3583,7 @@ function proposeGameMode() {
 function confirmGameMode() {
   if (!isMultiplayer || isSpectator || !["blue", "red"].includes(multiplayerSeat.color) || state.gameModeConfirmed || state.gameOver) return;
   state.modeConfirmations[multiplayerSeat.color] = true;
+  if (state.aiEnabled && state.aiSide) state.modeConfirmations[state.aiSide] = true;
   state.gameModeConfirmed = Boolean(state.modeConfirmations.blue && state.modeConfirmations.red);
   addLog(`${playerName(multiplayerSeat.color)} confirmed ${GAME_MODES[state.gameMode].name}.`);
   if (state.gameModeConfirmed) addLog(`${GAME_MODES[state.gameMode].name} confirmed by both players. Deployment may begin.`);

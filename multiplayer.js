@@ -5,6 +5,8 @@ const refreshButton = document.querySelector("#refreshButton");
 const logoutButton = document.querySelector("#logoutButton");
 const joinBlueButton = document.querySelector("#joinBlueButton");
 const joinRedButton = document.querySelector("#joinRedButton");
+const soloBlueButton = document.querySelector("#soloBlueButton");
+const soloRedButton = document.querySelector("#soloRedButton");
 const leaveButton = document.querySelector("#leaveButton");
 const enterGameLink = document.querySelector("#enterGameLink");
 const statusLine = document.querySelector("#statusLine");
@@ -116,6 +118,13 @@ function render() {
       join(button.dataset.joinLobby).catch(showError);
     });
   });
+  lobbyListEl.querySelectorAll("[data-join-ai]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectedLobbyId = button.dataset.lobbyId;
+      joinAi(button.dataset.joinAi).catch(showError);
+    });
+  });
   renderSelectedLobby();
 }
 
@@ -138,7 +147,8 @@ function renderLobbyActions(lobby) {
   const seatedSomewhere = Boolean(serverSession?.lobbyId);
   const inThisLobby = serverSession?.lobbyId === lobby.id;
   if (inThisLobby) {
-    const href = `/index.html?lobby=${encodeURIComponent(serverSession.lobbyId)}&color=${encodeURIComponent(serverSession.color)}`;
+    const aiColor = lobbyAiColor(lobby);
+    const href = `/index.html?lobby=${encodeURIComponent(serverSession.lobbyId)}&color=${encodeURIComponent(serverSession.color)}${aiColor ? `&ai=${encodeURIComponent(aiColor)}` : ""}`;
     return `
       <div class="lobby-actions">
         <a class="enter-link" href="${href}">Enter game room</a>
@@ -151,6 +161,8 @@ function renderLobbyActions(lobby) {
     <div class="lobby-actions">
       <button type="button" data-join-lobby="blue" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.blue ? "disabled" : ""}>Join Blue</button>
       <button type="button" data-join-lobby="red" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.red ? "disabled" : ""}>Join Red</button>
+      <button type="button" data-join-ai="blue" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.blue || lobby.players.red ? "disabled" : ""}>Solo as Blue</button>
+      <button type="button" data-join-ai="red" data-lobby-id="${lobby.id}" ${seatedSomewhere || lobby.players.blue || lobby.players.red ? "disabled" : ""}>Solo as Red</button>
     </div>
   `;
 }
@@ -159,9 +171,15 @@ function renderSeat(color, player) {
   return `
     <div class="seat-row">
       <span class="seat-color ${color}">${color}</span>
-      <span class="${player ? "" : "empty-seat"}">${player ? escapeHtml(player.name) : "Open"}</span>
+      <span class="${player ? "" : "empty-seat"}">${player ? `${escapeHtml(player.name)}${player.ai ? " (AI)" : ""}` : "Open"}</span>
     </div>
   `;
+}
+
+function lobbyAiColor(lobby) {
+  if (lobby?.players?.blue?.ai) return "blue";
+  if (lobby?.players?.red?.ai) return "red";
+  return null;
 }
 
 function renderSelectedLobby() {
@@ -170,6 +188,8 @@ function renderSelectedLobby() {
     roomSummaryEl.textContent = "No lobby selected.";
     joinBlueButton.disabled = true;
     joinRedButton.disabled = true;
+    soloBlueButton.disabled = true;
+    soloRedButton.disabled = true;
     leaveButton.disabled = true;
     enterGameLink.hidden = true;
     return;
@@ -186,11 +206,14 @@ function renderSelectedLobby() {
   const inThisLobby = serverSession?.lobbyId === lobby.id;
   joinBlueButton.disabled = seatedSomewhere || Boolean(lobby.players.blue);
   joinRedButton.disabled = seatedSomewhere || Boolean(lobby.players.red);
+  soloBlueButton.disabled = seatedSomewhere || Boolean(lobby.players.blue) || Boolean(lobby.players.red);
+  soloRedButton.disabled = seatedSomewhere || Boolean(lobby.players.blue) || Boolean(lobby.players.red);
   leaveButton.disabled = !inThisLobby;
 
   if (inThisLobby) {
+    const aiColor = lobbyAiColor(lobby);
     enterGameLink.hidden = false;
-    enterGameLink.href = `/index.html?lobby=${encodeURIComponent(serverSession.lobbyId)}&color=${encodeURIComponent(serverSession.color)}`;
+    enterGameLink.href = `/index.html?lobby=${encodeURIComponent(serverSession.lobbyId)}&color=${encodeURIComponent(serverSession.color)}${aiColor ? `&ai=${encodeURIComponent(aiColor)}` : ""}`;
     statusLine.textContent = `You are seated as ${serverSession.color.toUpperCase()} in ${lobby.name}.`;
   } else {
     enterGameLink.hidden = true;
@@ -201,6 +224,15 @@ function renderSelectedLobby() {
 async function join(color) {
   if (!selectedLobbyId) return;
   await api(`/api/lobbies/${selectedLobbyId}/join`, {
+    method: "POST",
+    body: JSON.stringify({ color }),
+  });
+  await refreshLobbies();
+}
+
+async function joinAi(color) {
+  if (!selectedLobbyId) return;
+  await api(`/api/lobbies/${selectedLobbyId}/join-ai`, {
     method: "POST",
     body: JSON.stringify({ color }),
   });
@@ -292,6 +324,8 @@ refreshButton.addEventListener("click", () => refreshLobbies().catch(showError))
 logoutButton.addEventListener("click", () => logout().catch(showError));
 joinBlueButton.addEventListener("click", () => join("blue").catch(showError));
 joinRedButton.addEventListener("click", () => join("red").catch(showError));
+soloBlueButton.addEventListener("click", () => joinAi("blue").catch(showError));
+soloRedButton.addEventListener("click", () => joinAi("red").catch(showError));
 leaveButton.addEventListener("click", () => leave().catch(showError));
 refreshAdminButton.addEventListener("click", () => loadAdminPanel().catch(showError));
 

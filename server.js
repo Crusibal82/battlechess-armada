@@ -223,8 +223,8 @@ function publicLobby(lobby) {
     id: lobby.id,
     name: lobby.name,
     players: {
-      blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
-      red: lobby.players.red ? { name: lobby.players.red.name } : null,
+      blue: lobby.players.blue ? { name: lobby.players.blue.name, ai: Boolean(lobby.players.blue.ai) } : null,
+      red: lobby.players.red ? { name: lobby.players.red.name, ai: Boolean(lobby.players.red.ai) } : null,
     },
     hostColor: lobbyHostColor(lobby),
     openSeats: COLORS.filter((color) => !lobby.players[color]),
@@ -235,7 +235,7 @@ function publicLobby(lobby) {
 
 function lobbyHostColor(lobby) {
   return COLORS
-    .filter((color) => lobby.players[color])
+    .filter((color) => lobby.players[color] && !lobby.players[color].ai)
     .sort((a, b) => lobby.players[a].joinedAt - lobby.players[b].joinedAt)[0] || null;
 }
 
@@ -277,11 +277,13 @@ function removePlayerFromLobby(token, requestedLobbyId = null) {
 }
 
 function resetLobbyGameIfEmpty(lobby) {
-  if (lobby.players.blue || lobby.players.red) return;
+  if (COLORS.some((color) => lobby.players[color] && !lobby.players[color].ai)) return;
   lobby.gameState = null;
   lobby.gameVersion = 0;
   lobby.gameUpdatedBy = null;
   lobby.chat = [];
+  lobby.players.blue = null;
+  lobby.players.red = null;
 }
 
 function cleanupStaleSessions() {
@@ -296,7 +298,7 @@ function cleanupStaleSessions() {
   for (const lobby of lobbies) {
     for (const color of COLORS) {
       const player = lobby.players[color];
-      if (player && !authSessions.has(player.token)) {
+      if (player && !player.ai && !authSessions.has(player.token)) {
         lobby.players[color] = null;
         lobby.updatedAt = now;
       }
@@ -425,6 +427,46 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { token: auth.token, lobby: publicLobby(lobby), color, name: auth.user.username });
   }
 
+  const joinAiMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/join-ai$/);
+  if (req.method === "POST" && joinAiMatch) {
+    const auth = requireAuth(req, res);
+    if (!auth) return;
+    const lobby = findLobby(joinAiMatch[1]);
+    if (!lobby) return sendJson(res, 404, { error: "Lobby not found." });
+
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch {
+      return sendJson(res, 400, { error: "Invalid JSON." });
+    }
+
+    const color = String(payload.color || "").toLowerCase();
+    if (!COLORS.includes(color)) return sendJson(res, 400, { error: "Color must be blue or red." });
+    if (auth.session.lobbyId) return sendJson(res, 409, { error: "Leave your current lobby before joining another." });
+    if (lobby.players[color]) return sendJson(res, 409, { error: `${color} is already seated.` });
+
+    const aiColor = COLORS.find((candidate) => candidate !== color);
+    if (lobby.players[aiColor] && !lobby.players[aiColor].ai) {
+      return sendJson(res, 409, { error: `${aiColor} is already seated.` });
+    }
+
+    const now = Date.now();
+    const player = { name: auth.user.username, userId: auth.user.id, color, token: auth.token, joinedAt: now };
+    const aiPlayer = { name: "AI Admiral", userId: "ai", color: aiColor, token: `ai-${lobby.id}-${aiColor}`, joinedAt: now + 1, ai: true };
+    lobby.players[color] = player;
+    lobby.players[aiColor] = aiPlayer;
+    lobby.gameState = null;
+    lobby.gameVersion = 0;
+    lobby.gameUpdatedBy = null;
+    lobby.chat = [];
+    lobby.updatedAt = now;
+    auth.session.lobbyId = lobby.id;
+    auth.session.color = color;
+
+    return sendJson(res, 200, { token: auth.token, lobby: publicLobby(lobby), color, name: auth.user.username });
+  }
+
   const leaveMatch = url.pathname.match(/^\/api\/lobbies\/(\d{2})\/leave$/);
   if (req.method === "POST" && leaveMatch) {
     const auth = requireAuth(req, res);
@@ -447,8 +489,8 @@ async function handleApi(req, res, url) {
       updatedBy: lobby.gameUpdatedBy,
       hostColor: lobbyHostColor(lobby),
       players: {
-        blue: lobby.players.blue ? { name: lobby.players.blue.name } : null,
-        red: lobby.players.red ? { name: lobby.players.red.name } : null,
+        blue: lobby.players.blue ? { name: lobby.players.blue.name, ai: Boolean(lobby.players.blue.ai) } : null,
+        red: lobby.players.red ? { name: lobby.players.red.name, ai: Boolean(lobby.players.red.ai) } : null,
       },
     });
   }

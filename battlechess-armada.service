@@ -1,0 +1,16 @@
+[Unit]
+Description=Battlechess Armada
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/html
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=BATTLECHESS_DATA_DIR=/var/lib/battlechess-armada
+ExecStart=/usr/bin/node /var/www/html/server.js
+Restart=always
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
