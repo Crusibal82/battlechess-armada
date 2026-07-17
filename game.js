@@ -813,6 +813,30 @@ function legalSquares(piece, mode) {
   return squares;
 }
 
+function movementPreviewSquares(piece) {
+  const def = PIECES[piece.type];
+  const commandBuff = commandBuffFor(piece);
+  const pattern = def.movement;
+  const range = def.moveRange + state.moveBonus[piece.side] + (commandBuff?.move || 0);
+
+  if (pattern === "knight") {
+    return filterSuppressed(piece.side, knightSquares(piece).filter((sq) => !sameSideAt(piece.side, sq.x, sq.y)));
+  }
+
+  const squares = [];
+  for (const [dx, dy] of getDirectionalSteps(pattern, piece.side)) {
+    for (let distance = 1; distance <= range; distance++) {
+      const x = piece.x + dx * distance;
+      const y = piece.y + dy * distance;
+      if (!isInside(x, y)) break;
+      const occupant = pieceAt(x, y);
+      if (occupant?.side === piece.side) break;
+      if (!isSuppressedFor(piece.side, x, y)) squares.push({ x, y });
+    }
+  }
+  return squares;
+}
+
 function filterSuppressed(side, squares) {
   return squares.filter((sq) => !isSuppressedFor(side, sq.x, sq.y));
 }
@@ -1049,6 +1073,24 @@ function pathBetween(from, to) {
   return squares;
 }
 
+function firstPieceInPath(piece, x, y) {
+  if (PIECES[piece.type].movement === "knight") return null;
+  const totalDx = x - piece.x;
+  const totalDy = y - piece.y;
+  if (totalDx && totalDy && Math.abs(totalDx) !== Math.abs(totalDy)) return null;
+  const dx = Math.sign(totalDx);
+  const dy = Math.sign(totalDy);
+  let cx = piece.x + dx;
+  let cy = piece.y + dy;
+  while (cx !== x || cy !== y) {
+    const blocker = pieceAt(cx, cy);
+    if (blocker) return blocker;
+    cx += dx;
+    cy += dy;
+  }
+  return pieceAt(x, y);
+}
+
 function legalMineSquares() {
   const piece = movedPiece();
   if (!piece || !state.lastMove) return [];
@@ -1057,16 +1099,19 @@ function legalMineSquares() {
 
 function moveSelectedTo(piece, x, y) {
   if (state.movedPieceId) return;
-  const legal = legalSquares(piece, "move");
-  if (!squareInList(x, y, legal)) return;
+  const previewSquares = movementPreviewSquares(piece);
+  if (!squareInList(x, y, previewSquares)) return;
+  const blocker = firstPieceInPath(piece, x, y);
+  if (blocker?.side === piece.side) return;
   if (state.steadyShot[piece.side] && state.steadyShot[piece.side] !== piece.id) {
     state.steadyShot[piece.side] = null;
     addLog(`${playerName(piece.side)} lost Steady Shot by activating a different ship.`);
   }
 
   const from = { x: piece.x, y: piece.y };
-  const occupant = pieceAt(x, y);
-  state.contacts[enemyOf(piece.side)].add(key(x, y));
+  const occupant = blocker || pieceAt(x, y);
+  const destination = occupant && occupant.side !== piece.side ? { x: occupant.x, y: occupant.y } : { x, y };
+  state.contacts[enemyOf(piece.side)].add(key(destination.x, destination.y));
 
   if (occupant && occupant.side !== piece.side) {
     const rammingEndedTurn = resolveRamming(piece, occupant, from);
@@ -1074,8 +1119,8 @@ function moveSelectedTo(piece, x, y) {
       return;
     }
   } else {
-    piece.x = x;
-    piece.y = y;
+    piece.x = destination.x;
+    piece.y = destination.y;
     resolveMineEntry(piece);
     resolveOverwatch(piece);
     resolveCurrentEntry(piece, from, { x, y });
@@ -2841,7 +2886,7 @@ function renderBoard() {
   const canPreviewSetup = !isMultiplayer || state.setupSide === viewer;
   const selected = selectedPiece();
   const moved = movedPiece();
-  const activeTargets = canPreviewRanges && !state.movedPieceId && (state.phase === "move" || state.phase === "commandMove") && selected?.side === viewer ? legalSquares(selected, "move") : [];
+  const activeTargets = canPreviewRanges && !state.movedPieceId && (state.phase === "move" || state.phase === "commandMove") && selected?.side === viewer ? movementPreviewSquares(selected) : [];
   const actionTargets =
     canPreviewRanges && !state.actionTaken && state.phase === "action" && moved?.side === viewer && state.actionMode !== "mine" ? legalSquares(moved, "target") : [];
   const mineTargets = canPreviewRanges && !state.actionTaken && state.phase === "action" && moved?.side === viewer && state.actionMode === "mine" ? legalMineSquares() : [];
