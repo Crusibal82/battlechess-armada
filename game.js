@@ -1475,7 +1475,11 @@ function performShot(piece, x, y, options = {}) {
   state.lastSuccessfulHit = appliedDamage > 0 ? { side: piece.side, pieceId: piece.id, x, y } : null;
   const targetName = target.revealedTo.has(piece.side) ? attackerDescription(target) : `${playerName(target.side)} hidden ship`;
   addLog(`${attackerDescription(piece)} hit ${targetName} at ${coord(x, y)} for ${appliedDamage} damage.`);
-  if (state.active !== piece.side || state.gameOver) return appliedDamage > 0;
+  if (state.gameOver) {
+    render();
+    return appliedDamage > 0;
+  }
+  if (state.active !== piece.side) return appliedDamage > 0;
   if (appliedDamage > 0 && targetHpBefore > appliedDamage && state.counterBattery.has(target.id) && state.pieces.some((candidate) => candidate.id === target.id)) {
     state.counterBattery.delete(target.id);
     performShot(target, piece.x, piece.y, { finish: false });
@@ -2434,9 +2438,8 @@ function resupply() {
 
 function surrenderGame() {
   if (state.gameOver || state.phase === "setup" || state.phase === "currentSetup" || state.phase === "currentShift") return;
-  state.winner = enemyOf(state.active);
-  state.gameOver = true;
-  addLog(`Game Over. ${playerName(state.active)} surrendered. ${playerName(state.winner)} wins.`);
+  const winner = enemyOf(state.active);
+  finishGame(winner, `Game Over. ${playerName(state.active)} surrendered. ${playerName(winner)} wins.`);
   render();
 }
 
@@ -2748,10 +2751,22 @@ function checkWinCondition(defeatedSide) {
   }
 
   if (won) {
-    state.gameOver = true;
-    state.winner = winner;
-    addLog(`Game Over. ${playerName(winner)} wins by ${reason}.`);
+    finishGame(winner, `Game Over. ${playerName(winner)} wins by ${reason}.`);
   }
+}
+
+function finishGame(winner, message) {
+  state.gameOver = true;
+  state.winner = winner;
+  state.reaction = null;
+  state.currentShift = null;
+  state.pendingCurrentShifts = [];
+  state.selectedId = null;
+  state.movedPieceId = null;
+  state.actionTaken = true;
+  clearSpecialMode();
+  window.clearTimeout(aiController.timer);
+  addLog(message);
 }
 
 function revealPiece(piece, side) {
