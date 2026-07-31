@@ -1021,17 +1021,14 @@ h2 {
   background: transparent;
   border: 0;
   color: var(--text);
-  left: 50%;
+  margin: 0 0 0.75rem;
   padding: 0;
-  position: fixed;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(92vw, 560px);
-  z-index: 20;
+  position: static;
+  width: 100%;
 }
 
 .reaction-dialog::backdrop {
-  background: rgba(4, 8, 12, 0.68);
+  background: transparent;
 }
 
 .reaction-modal {
@@ -1040,8 +1037,8 @@ h2 {
   border-radius: 8px;
   box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.36);
   display: grid;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.75rem;
+  padding: 0.8rem;
 }
 
 .bug-report-dialog {
@@ -1099,6 +1096,8 @@ h2 {
 .reaction-cards {
   display: grid;
   gap: 0.65rem;
+  max-height: 32vh;
+  overflow: auto;
 }
 
 .reaction-actions {

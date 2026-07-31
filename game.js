@@ -282,6 +282,11 @@ const bugReportForm = document.querySelector("#bugReportForm");
 const bugReportTitle = document.querySelector("#bugReportTitle");
 const bugReportDetails = document.querySelector("#bugReportDetails");
 const cancelBugReportButton = document.querySelector("#cancelBugReportButton");
+
+if (reactionDialog && battleLogEl?.parentElement) {
+  battleLogEl.parentElement.insertBefore(reactionDialog, battleLogEl);
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 function storedAuthToken() {
   try {
